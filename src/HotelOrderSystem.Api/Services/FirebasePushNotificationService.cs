@@ -30,8 +30,15 @@ public sealed class FirebasePushNotificationService : IPushNotificationService
     {
         var tokens = await _db.UserDevices
             .AsNoTracking()
-            .Where(x => x.IsActive && x.FcmToken != null && x.User.TeamId == teamId && x.User.IsActive)
+            .Where(x =>
+                x.IsActive &&
+                x.FcmToken != null &&
+                x.User.TeamId == teamId &&
+                x.User.IsActive &&
+                x.User.Role != Roles.Admin &&
+                _db.UserPresences.Any(p => p.UserId == x.UserId && p.IsReady))
             .Select(x => x.FcmToken!)
+            .Distinct()
             .ToListAsync(cancellationToken);
 
         await SendTokensAsync(tokens, type, payloadJson, cancellationToken);
@@ -43,6 +50,7 @@ public sealed class FirebasePushNotificationService : IPushNotificationService
             .AsNoTracking()
             .Where(x => x.IsActive && x.FcmToken != null && x.User.Role == Roles.Admin && x.User.IsActive)
             .Select(x => x.FcmToken!)
+            .Distinct()
             .ToListAsync(cancellationToken);
 
         await SendTokensAsync(tokens, type, payloadJson, cancellationToken);
@@ -52,8 +60,13 @@ public sealed class FirebasePushNotificationService : IPushNotificationService
     {
         var tokens = await _db.UserDevices
             .AsNoTracking()
-            .Where(x => x.IsActive && x.FcmToken != null && x.User.IsActive)
+            .Where(x =>
+                x.IsActive &&
+                x.FcmToken != null &&
+                x.User.IsActive &&
+                (x.User.Role == Roles.Admin || _db.UserPresences.Any(p => p.UserId == x.UserId && p.IsReady)))
             .Select(x => x.FcmToken!)
+            .Distinct()
             .ToListAsync(cancellationToken);
 
         await SendTokensAsync(tokens, type, payloadJson, cancellationToken);
