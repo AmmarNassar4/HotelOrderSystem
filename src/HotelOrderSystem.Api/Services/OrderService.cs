@@ -128,6 +128,11 @@ public sealed class OrderService : IOrderService
 
     public async Task<ApiResponse<IReadOnlyList<OrderDto>>> GetPendingAsync(int userId, int? teamId, string role, CancellationToken cancellationToken = default)
     {
+        if (role != Roles.Admin && !await IsReadyAsync(userId, cancellationToken))
+        {
+            return ApiResponse<IReadOnlyList<OrderDto>>.Success(Array.Empty<OrderDto>());
+        }
+
         var query = QueryOrders()
             .Where(x => x.Status == OrderStatuses.Pending);
 
@@ -171,6 +176,11 @@ public sealed class OrderService : IOrderService
 
     public async Task<ApiResponse<OrderDto>> AcceptAsync(int orderId, int userId, int? teamId, string role, AcceptOrderRequest request, CancellationToken cancellationToken = default)
     {
+        if (role != Roles.Admin && !await IsReadyAsync(userId, cancellationToken))
+        {
+            return ApiResponse<OrderDto>.Fail("Set your status to Ready before accepting new orders.");
+        }
+
         var order = await QueryOrders().FirstOrDefaultAsync(x => x.OrderId == orderId, cancellationToken);
         if (order is null)
         {
@@ -320,6 +330,11 @@ public sealed class OrderService : IOrderService
             Status = NotificationStatuses.Pending,
             CreatedAt = DateTime.UtcNow
         });
+    }
+
+    private Task<bool> IsReadyAsync(int userId, CancellationToken cancellationToken)
+    {
+        return _db.UserPresences.AnyAsync(x => x.UserId == userId && x.IsReady, cancellationToken);
     }
 
     private static bool CanAccessTeam(int? orderTeamId, int? userTeamId, string role)
