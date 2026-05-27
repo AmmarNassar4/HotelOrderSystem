@@ -12,6 +12,7 @@ namespace HotelOrderSystem.Api.Controllers;
 [ApiController]
 [Authorize(Roles = Roles.Admin)]
 [Route("api/v1/admin/catalog-items")]
+[Route("api/v1/admin/items")]
 public sealed class CatalogItemsController : ControllerBase
 {
     private readonly AppDbContext _db;
