@@ -18,6 +18,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<OrderDetail> OrderDetails => Set<OrderDetail>();
     public DbSet<UserDevice> UserDevices => Set<UserDevice>();
     public DbSet<UserPresence> UserPresences => Set<UserPresence>();
+    public DbSet<StaffAvailabilityLog> StaffAvailabilityLogs => Set<StaffAvailabilityLog>();
     public DbSet<NotificationOutbox> NotificationOutbox => Set<NotificationOutbox>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
@@ -159,6 +160,21 @@ public sealed class AppDbContext : DbContext
             entity.Property(x => x.LastConnectionId).HasMaxLength(200);
             entity.Property(x => x.LastKnownAppState).HasMaxLength(50);
             entity.HasIndex(x => x.UserId).IsUnique();
+            entity.HasIndex(x => new { x.IsOnline, x.IsReady });
+            entity.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StaffAvailabilityLog>(entity =>
+        {
+            entity.ToTable("StaffAvailabilityLogs");
+            entity.HasKey(x => x.StaffAvailabilityLogId);
+            entity.Property(x => x.Source).HasMaxLength(80).IsRequired();
+            entity.Property(x => x.DeviceId).HasMaxLength(200);
+            entity.HasIndex(x => new { x.UserId, x.StartedAt });
+            entity.HasIndex(x => new { x.UserId, x.EndedAt });
             entity.HasOne(x => x.User)
                 .WithMany()
                 .HasForeignKey(x => x.UserId)
