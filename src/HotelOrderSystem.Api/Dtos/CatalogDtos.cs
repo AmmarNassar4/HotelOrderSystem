@@ -11,10 +11,18 @@ public sealed record TeamDto(
     string Name,
     bool IsActive);
 
+public sealed record ItemCategoryDto(
+    int ItemCategoryId,
+    string Name,
+    string? Description,
+    bool IsActive);
+
 public sealed record ItemDto(
     int ItemId,
     string Name,
     string Type,
+    int ItemCategoryId,
+    string ItemCategoryName,
     int? TargetTeamId,
     string? TargetTeamName,
     string BaseProperties,
@@ -22,4 +30,5 @@ public sealed record ItemDto(
 
 public sealed record GuestCatalogDto(
     RoomDto Room,
+    IReadOnlyList<ItemCategoryDto> Categories,
     IReadOnlyList<ItemDto> Items);
