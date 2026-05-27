@@ -1,0 +1,36 @@
+@host = https://localhost:7188
+@token = paste-jwt-here
+
+### Login as admin
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "userName": "admin",
+  "password": "admin123"
+}
+
+### Pending orders
+GET {{host}}/api/v1/orders/pending
+Authorization: Bearer {{token}}
+
+### Rooms
+GET {{host}}/api/v1/rooms
+Authorization: Bearer {{token}}
+
+### Items
+GET {{host}}/api/v1/items
+Authorization: Bearer {{token}}
+
+### Create order
+POST {{host}}/api/v1/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "roomId": 1,
+  "source": "Admin",
+  "items": [
+    { "itemId": 1, "quantity": 2, "dynamicAttributes": { "Size": "Large" } }
+  ]
+}
