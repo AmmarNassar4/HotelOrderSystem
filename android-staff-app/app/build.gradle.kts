@@ -15,7 +15,7 @@ android {
         versionCode = 1
         versionName = "1.0.0"
 
-        buildConfigField("String", "WEB_APP_URL", '"https://example.com/staff"')
+        buildConfigField("String", "WEB_APP_URL", '"https://example.com/#/staff"')
         buildConfigField("String", "API_BASE_URL", '"https://example.com"')
     }
 
@@ -25,7 +25,6 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             buildConfigField("String", "WEB_APP_URL", '"https://10.0.2.2:5001/#/staff"')
             buildConfigField("String", "API_BASE_URL", '"https://10.0.2.2:5001"')
@@ -47,4 +46,5 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.webkit:webkit:1.12.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 }
