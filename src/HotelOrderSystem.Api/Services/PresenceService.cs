@@ -38,7 +38,7 @@ public sealed class PresenceService : IPresenceService
 
         if (presence is null)
         {
-            presence = new UserPresence { UserId = userId };
+            presence = new UserPresence { UserId = userId, IsReady = false };
             _db.UserPresences.Add(presence);
         }
 
@@ -48,7 +48,10 @@ public sealed class PresenceService : IPresenceService
         presence.UpdatedAt = now;
 
         var user = await _db.Users.AsNoTracking().FirstAsync(x => x.UserId == userId, cancellationToken);
-        var pendingCount = await _db.Orders.CountAsync(x => x.Status == OrderStatuses.Pending && (user.Role == Roles.Admin || x.AssignedTeamId == null || x.AssignedTeamId == user.TeamId), cancellationToken);
+        var canReceivePending = user.Role == Roles.Admin || presence.IsReady;
+        var pendingCount = canReceivePending
+            ? await _db.Orders.CountAsync(x => x.Status == OrderStatuses.Pending && (user.Role == Roles.Admin || x.AssignedTeamId == null || x.AssignedTeamId == user.TeamId), cancellationToken)
+            : 0;
 
         await _db.SaveChangesAsync(cancellationToken);
 
@@ -57,7 +60,77 @@ public sealed class PresenceService : IPresenceService
             await _realtime.NotifyStaffPresenceChangedAsync(userId, true, cancellationToken);
         }
 
-        return ApiResponse<HeartbeatResponse>.Success(new HeartbeatResponse(now, true, pendingCount));
+        return ApiResponse<HeartbeatResponse>.Success(new HeartbeatResponse(now, true, presence.IsReady, pendingCount));
+    }
+
+    public async Task<ApiResponse<AvailabilityResponse>> SetAvailabilityAsync(int userId, AvailabilityRequest request, CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+        var user = await _db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == userId && x.IsActive, cancellationToken);
+        if (user is null)
+        {
+            return ApiResponse<AvailabilityResponse>.Fail("User not found or inactive.");
+        }
+
+        if (user.Role == Roles.Admin)
+        {
+            return ApiResponse<AvailabilityResponse>.Fail("Admin users do not receive staff task availability state.");
+        }
+
+        var presence = await _db.UserPresences.FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken);
+        var wasReady = presence?.IsReady == true;
+
+        if (presence is null)
+        {
+            presence = new UserPresence { UserId = userId };
+            _db.UserPresences.Add(presence);
+        }
+
+        presence.IsOnline = true;
+        presence.IsReady = request.IsReady;
+        presence.ReadySinceAt = request.IsReady ? (wasReady ? presence.ReadySinceAt ?? now : now) : null;
+        presence.LastAvailabilityChangedAt = wasReady == request.IsReady ? presence.LastAvailabilityChangedAt ?? now : now;
+        presence.LastHeartbeatAt = now;
+        presence.LastKnownAppState = request.Source ?? "availability";
+        presence.UpdatedAt = now;
+
+        if (!string.IsNullOrWhiteSpace(request.DeviceId))
+        {
+            var device = await _db.UserDevices.FirstOrDefaultAsync(x => x.UserId == userId && x.DeviceId == request.DeviceId, cancellationToken);
+            if (device is not null)
+            {
+                device.LastSeenAt = now;
+                device.UpdatedAt = now;
+                device.IsActive = true;
+            }
+        }
+
+        if (wasReady != request.IsReady)
+        {
+            var openLog = await _db.StaffAvailabilityLogs
+                .Where(x => x.UserId == userId && x.EndedAt == null)
+                .OrderByDescending(x => x.StartedAt)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (openLog is not null)
+            {
+                openLog.EndedAt = now;
+            }
+
+            _db.StaffAvailabilityLogs.Add(new StaffAvailabilityLog
+            {
+                UserId = userId,
+                IsReady = request.IsReady,
+                Source = string.IsNullOrWhiteSpace(request.Source) ? "MobileApp" : request.Source.Trim(),
+                DeviceId = string.IsNullOrWhiteSpace(request.DeviceId) ? null : request.DeviceId.Trim(),
+                StartedAt = now
+            });
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+        await _realtime.NotifyStaffPresenceChangedAsync(userId, true, cancellationToken);
+
+        return ApiResponse<AvailabilityResponse>.Success(new AvailabilityResponse(presence.IsReady, presence.ReadySinceAt, presence.LastAvailabilityChangedAt ?? now));
     }
 
     public async Task<IReadOnlyList<StaffPresenceDto>> GetTeamPresenceAsync(int? teamId, CancellationToken cancellationToken = default)
@@ -82,6 +155,8 @@ public sealed class PresenceService : IPresenceService
                 x.user.TeamId,
                 x.user.Team != null ? x.user.Team.Name : null,
                 x.presence != null && x.presence.IsOnline,
+                x.presence != null && x.presence.IsReady,
+                x.presence != null ? x.presence.ReadySinceAt : null,
                 x.presence != null ? x.presence.LastHeartbeatAt : null,
                 x.presence != null ? x.presence.LastKnownAppState : null))
             .ToListAsync(cancellationToken);
