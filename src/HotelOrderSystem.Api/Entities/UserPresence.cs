@@ -6,6 +6,9 @@ public sealed class UserPresence
     public int UserId { get; set; }
     public User User { get; set; } = null!;
     public bool IsOnline { get; set; }
+    public bool IsReady { get; set; }
+    public DateTime? ReadySinceAt { get; set; }
+    public DateTime? LastAvailabilityChangedAt { get; set; }
     public DateTime? LastHeartbeatAt { get; set; }
     public string? LastConnectionId { get; set; }
     public string? LastKnownAppState { get; set; }
