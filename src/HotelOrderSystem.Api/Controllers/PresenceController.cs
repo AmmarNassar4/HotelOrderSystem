@@ -25,6 +25,13 @@ public sealed class PresenceController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPut("availability")]
+    public async Task<ActionResult<ApiResponse<AvailabilityResponse>>> SetAvailability(AvailabilityRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _presence.SetAvailabilityAsync(User.GetUserId(), request, cancellationToken);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
+    }
+
     [Authorize(Roles = Roles.Admin + "," + Roles.Supervisor)]
     [HttpGet("team/{teamId:int}")]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<StaffPresenceDto>>>> GetTeamPresence(int teamId, CancellationToken cancellationToken)
