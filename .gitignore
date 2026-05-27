@@ -7,3 +7,20 @@ obj/
 *.sln.docstates
 TestResults/
 appsettings.Production.json
+
+# Android / Gradle
+.gradle/
+build/
+local.properties
+android-staff-app/.gradle/
+android-staff-app/build/
+android-staff-app/app/build/
+android-staff-app/app/google-services.json
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
