@@ -914,7 +914,7 @@
               </select>
             </div>
             ${linePicker(items, "auth")}
-            <button class="btn btn-soft" type="submit">Add to cart</button>
+            <button class="btn btn-soft" type="submit">Add to my request</button>
           </form>
         </section>
         <section class="card">
