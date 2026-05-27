@@ -61,16 +61,23 @@ public static class SeedData
 
         db.Users.AddRange(admin, hkStaff, mtStaff, restaurantStaff);
 
+        var amenities = new ItemCategory { Name = "Room Amenities", Description = "Housekeeping products and consumables", IsActive = true };
+        var maintenanceServices = new ItemCategory { Name = "Maintenance Services", Description = "Engineering and repair requests", IsActive = true };
+        var foodAndBeverage = new ItemCategory { Name = "Food & Beverage", Description = "Restaurant and room service items", IsActive = true };
+        var guestServices = new ItemCategory { Name = "Guest Services", Description = "General guest assistance", IsActive = true };
+        db.ItemCategories.AddRange(amenities, maintenanceServices, foodAndBeverage, guestServices);
+        await db.SaveChangesAsync(cancellationToken);
+
         db.Rooms.AddRange(
             new Room { RoomNumber = "101", DirectLinkPayload = "room-101", IsActive = true },
             new Room { RoomNumber = "102", DirectLinkPayload = "room-102", IsActive = true },
             new Room { RoomNumber = "201", DirectLinkPayload = "room-201", IsActive = true });
 
         db.Items.AddRange(
-            new Item { Name = "Extra Towels", Type = ItemTypes.Product, TargetTeamId = housekeeping.TeamId, BaseProperties = "{\"__schemaVersion\":1,\"fields\":[{\"key\":\"size\",\"label\":\"Size\",\"type\":\"select\",\"required\":true,\"options\":[\"Small\",\"Medium\",\"Large\"],\"defaultValue\":\"Large\"}]}", IsActive = true },
-            new Item { Name = "Plumbing Repair", Type = ItemTypes.Service, TargetTeamId = maintenance.TeamId, BaseProperties = "{\"__schemaVersion\":1,\"fields\":[{\"key\":\"urgency\",\"label\":\"Urgency\",\"type\":\"select\",\"required\":true,\"options\":[\"Normal\",\"High\",\"Emergency\"],\"defaultValue\":\"Normal\"},{\"key\":\"issue_notes\",\"label\":\"Issue notes\",\"type\":\"notes\",\"required\":false}]}", IsActive = true },
-            new Item { Name = "Burger", Type = ItemTypes.Product, TargetTeamId = restaurant.TeamId, BaseProperties = "{\"__schemaVersion\":1,\"fields\":[{\"key\":\"spicy\",\"label\":\"Spicy\",\"type\":\"boolean\",\"required\":false,\"defaultValue\":false},{\"key\":\"doneness\",\"label\":\"Doneness\",\"type\":\"select\",\"required\":false,\"options\":[\"Medium\",\"Well done\"]}]}", IsActive = true },
-            new Item { Name = "General Assistance", Type = ItemTypes.Service, TargetTeamId = null, BaseProperties = "{\"__schemaVersion\":1,\"fields\":[{\"key\":\"notes\",\"label\":\"Request notes\",\"type\":\"notes\",\"required\":false}]}", IsActive = true });
+            new Item { Name = "Extra Towels", Type = ItemTypes.Product, ItemCategoryId = amenities.ItemCategoryId, TargetTeamId = housekeeping.TeamId, BaseProperties = "{\"__schemaVersion\":1,\"fields\":[{\"key\":\"size\",\"label\":\"Size\",\"type\":\"select\",\"required\":true,\"options\":[\"Small\",\"Medium\",\"Large\"],\"defaultValue\":\"Large\"}]}", IsActive = true },
+            new Item { Name = "Plumbing Repair", Type = ItemTypes.Service, ItemCategoryId = maintenanceServices.ItemCategoryId, TargetTeamId = maintenance.TeamId, BaseProperties = "{\"__schemaVersion\":1,\"fields\":[{\"key\":\"urgency\",\"label\":\"Urgency\",\"type\":\"select\",\"required\":true,\"options\":[\"Normal\",\"High\",\"Emergency\"],\"defaultValue\":\"Normal\"},{\"key\":\"issue_notes\",\"label\":\"Issue notes\",\"type\":\"notes\",\"required\":false}]}", IsActive = true },
+            new Item { Name = "Burger", Type = ItemTypes.Product, ItemCategoryId = foodAndBeverage.ItemCategoryId, TargetTeamId = restaurant.TeamId, BaseProperties = "{\"__schemaVersion\":1,\"fields\":[{\"key\":\"spicy\",\"label\":\"Spicy\",\"type\":\"boolean\",\"required\":false,\"defaultValue\":false},{\"key\":\"doneness\",\"label\":\"Doneness\",\"type\":\"select\",\"required\":false,\"options\":[\"Medium\",\"Well done\"]}]}", IsActive = true },
+            new Item { Name = "General Assistance", Type = ItemTypes.Service, ItemCategoryId = guestServices.ItemCategoryId, TargetTeamId = null, BaseProperties = "{\"__schemaVersion\":1,\"fields\":[{\"key\":\"notes\",\"label\":\"Request notes\",\"type\":\"notes\",\"required\":false}]}", IsActive = true });
 
         await db.SaveChangesAsync(cancellationToken);
     }
