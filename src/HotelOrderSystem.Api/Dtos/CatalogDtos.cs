@@ -21,14 +21,14 @@ public sealed record ItemDto(
     int ItemId,
     string Name,
     string Type,
-    int ItemCategoryId,
-    string ItemCategoryName,
     int? TargetTeamId,
     string? TargetTeamName,
     string BaseProperties,
-    bool IsActive);
+    bool IsActive,
+    int? ItemCategoryId = null,
+    string? ItemCategoryName = null);
 
 public sealed record GuestCatalogDto(
     RoomDto Room,
-    IReadOnlyList<ItemCategoryDto> Categories,
-    IReadOnlyList<ItemDto> Items);
+    IReadOnlyList<ItemDto> Items,
+    IReadOnlyList<ItemCategoryDto>? Categories = null);
