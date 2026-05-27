@@ -22,10 +22,14 @@ public sealed class AdminDashboardController : ControllerBase
     [HttpGet("dashboard/live-summary")]
     public async Task<ActionResult<ApiResponse<DashboardSummaryDto>>> GetDashboardSummary(CancellationToken cancellationToken)
     {
+        var onlineStaff = await _db.UserPresences.CountAsync(x => x.IsOnline, cancellationToken);
+        var readyStaff = await _db.UserPresences.CountAsync(x => x.IsOnline && x.IsReady, cancellationToken);
         var summary = new DashboardSummaryDto(
             await _db.Orders.CountAsync(x => x.Status == OrderStatuses.Pending, cancellationToken),
             await _db.Orders.CountAsync(x => x.Status == OrderStatuses.Accepted || x.Status == OrderStatuses.InProgress, cancellationToken),
-            await _db.UserPresences.CountAsync(x => x.IsOnline, cancellationToken),
+            onlineStaff,
+            readyStaff,
+            Math.Max(0, onlineStaff - readyStaff),
             await _db.Rooms.CountAsync(x => x.IsActive, cancellationToken),
             DateTime.UtcNow);
 
@@ -47,6 +51,13 @@ public sealed class AdminDashboardController : ControllerBase
             .Include(x => x.AcceptedByUser)
                 .ThenInclude(x => x!.Team)
             .Where(x => x.CreatedAt >= from && x.CreatedAt <= to)
+            .ToListAsync(cancellationToken);
+
+        var availabilityLogs = await _db.StaffAvailabilityLogs
+            .AsNoTracking()
+            .Include(x => x.User)
+                .ThenInclude(x => x.Team)
+            .Where(x => x.StartedAt <= to && (x.EndedAt == null || x.EndedAt >= from))
             .ToListAsync(cancellationToken);
 
         var total = orders.Count;
@@ -73,7 +84,7 @@ public sealed class AdminDashboardController : ControllerBase
             .OrderByDescending(x => x.TotalOrders)
             .ToList();
 
-        var byStaff = orders
+        var staffOrderGroups = orders
             .Where(x => x.AcceptedByUserId.HasValue && x.AcceptedByUser != null)
             .GroupBy(x => new
             {
@@ -81,16 +92,45 @@ public sealed class AdminDashboardController : ControllerBase
                 x.AcceptedByUser!.FullName,
                 TeamName = x.AcceptedByUser.Team != null ? x.AcceptedByUser.Team.Name : null
             })
-            .Select(g => new StaffPerformanceDto(
-                g.Key.UserId,
-                g.Key.FullName,
-                g.Key.TeamName,
-                g.Count(x => x.Status == OrderStatuses.Accepted || x.Status == OrderStatuses.InProgress),
-                g.Count(x => x.Status == OrderStatuses.Completed),
-                AverageMinutes(g.Where(x => x.AcceptedAt.HasValue).Select(x => x.AcceptedAt!.Value - x.CreatedAt)),
-                AverageMinutes(g.Where(x => x.CompletedAt.HasValue).Select(x => x.CompletedAt!.Value - x.CreatedAt))))
-            .OrderByDescending(x => x.CompletedOrders)
             .ToList();
+
+        var availabilityByUser = availabilityLogs
+            .GroupBy(x => new { x.UserId, x.User.FullName, TeamName = x.User.Team != null ? x.User.Team.Name : null })
+            .ToDictionary(
+                x => x.Key.UserId,
+                x => new
+                {
+                    x.Key.FullName,
+                    x.Key.TeamName,
+                    ReadyMinutes = Math.Round(x.Where(l => l.IsReady).Sum(l => OverlapMinutes(l.StartedAt, l.EndedAt ?? to, from, to)), 2),
+                    NotReadyMinutes = Math.Round(x.Where(l => !l.IsReady).Sum(l => OverlapMinutes(l.StartedAt, l.EndedAt ?? to, from, to)), 2)
+                });
+
+        var staffIds = staffOrderGroups.Select(x => x.Key.UserId).Concat(availabilityByUser.Keys).Distinct().ToList();
+        var byStaff = staffIds.Select(userId =>
+        {
+            var orderGroup = staffOrderGroups.FirstOrDefault(x => x.Key.UserId == userId);
+            availabilityByUser.TryGetValue(userId, out var availability);
+            var fullName = orderGroup?.Key.FullName ?? availability?.FullName ?? $"User {userId}";
+            var teamName = orderGroup?.Key.TeamName ?? availability?.TeamName;
+            var readyMinutes = availability?.ReadyMinutes ?? 0;
+            var notReadyMinutes = availability?.NotReadyMinutes ?? 0;
+            var denominator = readyMinutes + notReadyMinutes;
+            return new StaffPerformanceDto(
+                userId,
+                fullName,
+                teamName,
+                orderGroup?.Count(x => x.Status == OrderStatuses.Accepted || x.Status == OrderStatuses.InProgress) ?? 0,
+                orderGroup?.Count(x => x.Status == OrderStatuses.Completed) ?? 0,
+                orderGroup is null ? null : AverageMinutes(orderGroup.Where(x => x.AcceptedAt.HasValue).Select(x => x.AcceptedAt!.Value - x.CreatedAt)),
+                orderGroup is null ? null : AverageMinutes(orderGroup.Where(x => x.CompletedAt.HasValue).Select(x => x.CompletedAt!.Value - x.CreatedAt)),
+                readyMinutes,
+                notReadyMinutes,
+                denominator <= 0 ? 0 : Math.Round(readyMinutes * 100.0 / denominator, 2));
+        })
+        .OrderByDescending(x => x.CompletedOrders)
+        .ThenByDescending(x => x.ReadyMinutes)
+        .ToList();
 
         var response = new PerformanceSummaryDto(
             from,
@@ -115,5 +155,12 @@ public sealed class AdminDashboardController : ControllerBase
     {
         var list = values.Select(x => x.TotalMinutes).Where(x => x >= 0).ToList();
         return list.Count == 0 ? null : Math.Round(list.Average(), 2);
+    }
+
+    private static double OverlapMinutes(DateTime start, DateTime end, DateTime windowStart, DateTime windowEnd)
+    {
+        var effectiveStart = start > windowStart ? start : windowStart;
+        var effectiveEnd = end < windowEnd ? end : windowEnd;
+        return effectiveEnd <= effectiveStart ? 0 : (effectiveEnd - effectiveStart).TotalMinutes;
     }
 }
