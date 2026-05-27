@@ -44,10 +44,10 @@ public sealed record DashboardSummaryDto(
     int PendingOrders,
     int AcceptedOrders,
     int OnlineStaff,
-    int ReadyStaff,
-    int NotReadyStaff,
     int ActiveRooms,
-    DateTime ServerTimeUtc);
+    DateTime ServerTimeUtc,
+    int ReadyStaff = 0,
+    int NotReadyStaff = 0);
 
 public sealed record StatusBreakdownDto(
     string Status,
@@ -73,9 +73,9 @@ public sealed record StaffPerformanceDto(
     int CompletedOrders,
     double? AverageAcceptMinutes,
     double? AverageCompletionMinutes,
-    double ReadyMinutes,
-    double NotReadyMinutes,
-    double ReadyRatePercent);
+    double ReadyMinutes = 0,
+    double NotReadyMinutes = 0,
+    double ReadyRatePercent = 0);
 
 public sealed record PerformanceSummaryDto(
     DateTime FromUtc,
