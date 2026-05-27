@@ -8,7 +8,18 @@ public sealed record HeartbeatRequest(
 public sealed record HeartbeatResponse(
     DateTime ServerTimeUtc,
     bool Online,
+    bool IsReady,
     int PendingOrdersCount);
+
+public sealed record AvailabilityRequest(
+    bool IsReady,
+    string? DeviceId,
+    string? Source);
+
+public sealed record AvailabilityResponse(
+    bool IsReady,
+    DateTime? ReadySinceAtUtc,
+    DateTime ChangedAtUtc);
 
 public sealed record StaffPresenceDto(
     int UserId,
@@ -16,5 +27,7 @@ public sealed record StaffPresenceDto(
     int? TeamId,
     string? TeamName,
     bool IsOnline,
+    bool IsReady,
+    DateTime? ReadySinceAtUtc,
     DateTime? LastHeartbeatAtUtc,
     string? LastKnownAppState);
