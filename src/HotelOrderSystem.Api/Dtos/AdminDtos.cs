@@ -6,9 +6,13 @@ public sealed record UpdateTeamRequest(string Name, bool IsActive = true);
 public sealed record CreateRoomRequest(string RoomNumber, string? DirectLinkPayload, bool IsActive = true);
 public sealed record UpdateRoomRequest(string RoomNumber, string? DirectLinkPayload, bool IsActive = true);
 
+public sealed record CreateItemCategoryRequest(string Name, string? Description, bool IsActive = true);
+public sealed record UpdateItemCategoryRequest(string Name, string? Description, bool IsActive = true);
+
 public sealed record CreateItemRequest(
     string Name,
     string Type,
+    int ItemCategoryId,
     int? TargetTeamId,
     string? BaseProperties,
     bool IsActive = true);
@@ -16,6 +20,7 @@ public sealed record CreateItemRequest(
 public sealed record UpdateItemRequest(
     string Name,
     string Type,
+    int ItemCategoryId,
     int? TargetTeamId,
     string? BaseProperties,
     bool IsActive = true);
