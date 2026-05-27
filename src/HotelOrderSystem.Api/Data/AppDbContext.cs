@@ -12,6 +12,7 @@ public sealed class AppDbContext : DbContext
     public DbSet<Team> Teams => Set<Team>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Room> Rooms => Set<Room>();
+    public DbSet<ItemCategory> ItemCategories => Set<ItemCategory>();
     public DbSet<Item> Items => Set<Item>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderDetail> OrderDetails => Set<OrderDetail>();
@@ -60,6 +61,16 @@ public sealed class AppDbContext : DbContext
             entity.HasQueryFilter(x => !x.IsDeleted);
         });
 
+        modelBuilder.Entity<ItemCategory>(entity =>
+        {
+            entity.ToTable("ItemCategories");
+            entity.HasKey(x => x.ItemCategoryId);
+            entity.Property(x => x.Name).HasMaxLength(150).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(500);
+            entity.HasIndex(x => x.Name).IsUnique();
+            entity.HasQueryFilter(x => !x.IsDeleted);
+        });
+
         modelBuilder.Entity<Item>(entity =>
         {
             entity.ToTable("Items", table =>
@@ -69,6 +80,10 @@ public sealed class AppDbContext : DbContext
             entity.HasKey(x => x.ItemId);
             entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
             entity.Property(x => x.Type).HasMaxLength(50).IsRequired();
+            entity.HasOne(x => x.Category)
+                .WithMany(x => x.Items)
+                .HasForeignKey(x => x.ItemCategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
             entity.Property(x => x.BaseProperties).HasColumnType("nvarchar(max)").IsRequired();
             entity.HasOne(x => x.TargetTeam)
                 .WithMany(x => x.Items)
