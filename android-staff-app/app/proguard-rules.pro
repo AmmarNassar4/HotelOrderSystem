@@ -1,0 +1,2 @@
+-keep class com.google.firebase.messaging.** { *; }
+-keep class com.ibaapps.HotelOrderSystem.** { *; }
