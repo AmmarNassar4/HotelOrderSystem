@@ -640,19 +640,14 @@
               <div class="brand-mark">H</div>
               <div>
                 <div class="brand-title">Hotel Order System</div>
-                <div class="brand-subtitle">Admin + Staff + Guest</div>
+               
               </div>
             </div>
             <h1>Manage hotel requests from one place</h1>
             <p>An admin dashboard, a mobile-friendly staff console, and guest QR pages for creating requests without sign-in.</p>
-            <div class="hero-chips">
-              <span class="hero-chip">SignalR Live</span>
-              <span class="hero-chip">JWT API</span>
-              <span class="hero-chip">Responsive Web</span>
-              <span class="hero-chip">Guest QR</span>
-            </div>
+            
           </div>
-          <p class="footer-note">The web frontend runs directly from the API project and can also run inside a lightweight Android WebView shell.</p>
+          
         </section>
         <section class="auth-card">
           <h2>Sign in</h2>
@@ -668,11 +663,7 @@
             </div>
             <button class="btn btn-primary btn-block" type="submit">Sign in</button>
           </form>
-          <div class="demo-logins">
-            <button type="button" data-action="demo-login" data-user="admin" data-pass="admin123"><span>Admin</span><strong>admin123</strong></button>
-            <button type="button" data-action="demo-login" data-user="housekeeping" data-pass="staff123"><span>Housekeeping</span><strong>staff123</strong></button>
-            <button type="button" data-action="demo-login" data-user="maintenance" data-pass="staff123"><span>Maintenance</span><strong>staff123</strong></button>
-          </div>
+          
         </section>
       </div>
     `);
