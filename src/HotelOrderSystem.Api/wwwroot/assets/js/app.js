@@ -12,6 +12,7 @@
     hub: null,
     hubMode: null,
     heartbeatTimer: null,
+    isReady: null,
     pollingTimer: null,
     isRendering: false,
     rooms: [],
@@ -561,6 +562,13 @@
       return `<a class="${active ? "active" : ""}" href="#/${item.path}"><span class="nav-icon">${item.icon}</span><span>${item.label}</span></a>`;
     }).join("");
 
+    const isUserReady = state.isReady ?? false;
+    const readyToggle = isAdmin() ? "" : `
+      <button class="btn btn-block" style="margin-top:8px;background:${isUserReady ? 'var(--color-success)' : 'var(--color-warning)'};color:#fff;border:none;cursor:pointer" data-action="toggle-ready">
+        ${isUserReady ? "<span class='status-dot online'></span> Ready — click to Not Ready" : "<span class='status-dot offline'></span> Not Ready — click to Ready"}
+      </button>
+    `;
+
     return `
       <div class="app-shell">
         <aside class="sidebar">
@@ -577,6 +585,7 @@
               <strong>${html(u?.fullName || u?.userName || "")}</strong>
               <small>${html(roleLabel(u?.role))}${u?.teamName ? " - " + html(u.teamName) : ""}</small>
             </div>
+            ${readyToggle}
             <button class="btn btn-soft btn-block" style="margin-top:10px" data-action="logout">Sign out</button>
           </div>
         </aside>
@@ -1517,15 +1526,9 @@
     const data = await api("/api/v1/auth/login", { method: "POST", auth: false, body: { userName, password } });
     saveSession(data);
     toast("Signed in successfully");
-    await api("/api/v1/auth/device-token", {
-      method: "PUT",
-      body: {
-        deviceId: deviceId(),
-        platform: "Web",
-        appVersion: "1.0.0",
-        fcmToken: "web-ui-placeholder"
-      }
-    }).catch(() => {});
+    if (!isAdmin()) {
+      Notification.requestPermission().catch(() => {});
+    }
     go(data.user?.role === "Admin" ? "admin/dashboard" : "staff/tasks");
     render();
   }
@@ -1566,7 +1569,7 @@
   async function sendHeartbeat() {
     if (!isLoggedIn()) return;
     try {
-      await api("/api/v1/presence/heartbeat", {
+      const data = await api("/api/v1/presence/heartbeat", {
         method: "PUT",
         body: {
           deviceId: deviceId(),
@@ -1574,6 +1577,7 @@
           currentScreen: normalizeHash() || "home"
         }
       });
+      if (data?.isReady !== undefined && state.isReady === null) state.isReady = data.isReady;
       updateConnectionPill(true);
     } catch {
       updateConnectionPill(false);
@@ -1598,7 +1602,21 @@
 
     const refresh = debounce(() => refreshCurrentPage(), 700);
 
-    ["OrderCreated", "OrderAccepted", "OrderCompleted", "DashboardChanged", "StaffPresenceChanged"].forEach(eventName => {
+    hub.on("OrderCreated", (order) => {
+      const host = document.getElementById("toast");
+      if (host && !isAdmin()) {
+        const node = document.createElement("div");
+        node.className = "toast notification";
+        node.style.cursor = "pointer";
+        node.innerHTML = `<strong>🔔 New order!</strong><br>Room ${order?.roomNumber || "?"} — click to view`;
+        node.onclick = () => { go("staff/tasks"); node.remove(); };
+        host.appendChild(node);
+        setTimeout(() => node.remove(), 8000);
+      }
+      refresh();
+    });
+
+    ["OrderAccepted", "OrderCompleted", "DashboardChanged", "StaffPresenceChanged"].forEach(eventName => {
       hub.on(eventName, refresh);
     });
 
@@ -1679,6 +1697,17 @@
 
       if (action === "logout") {
         await logout();
+        return;
+      }
+
+      if (action === "toggle-ready") {
+        const next = state.isReady === null ? true : !state.isReady;
+        await withButton(button, async () => {
+          state.isReady = next;
+          await api("/api/v1/presence/availability", { method: "PUT", body: { isReady: next, deviceId: deviceId(), source: "Web" } });
+          toast(next ? "Status set to Ready" : "Status set to Not Ready", next ? "success" : "warning");
+          refreshCurrentPage();
+        });
         return;
       }
 

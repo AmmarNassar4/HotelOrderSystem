@@ -1,5 +1,7 @@
 using System.Reflection;
 using System.Text;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 using HotelOrderSystem.Api.Config;
 using HotelOrderSystem.Api.Data;
 using HotelOrderSystem.Api.Hubs;
@@ -136,6 +138,7 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
+    var loggerFactory = scope.ServiceProvider.GetRequiredService<ILoggerFactory>();
     var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var passwordService = scope.ServiceProvider.GetRequiredService<IPasswordService>();
@@ -148,6 +151,34 @@ using (var scope = app.Services.CreateScope())
     if (configuration.GetValue<bool>("Database:SeedDemoData"))
     {
         await SeedData.EnsureSeededAsync(db, passwordService);
+    }
+
+    var notificationOptions = configuration.GetSection("Notifications").Get<NotificationOptions>();
+    if (notificationOptions?.FcmMode != "Stub")
+    {
+        var serviceAccountPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "firebase-service-account.json");
+        if (File.Exists(serviceAccountPath))
+        {
+            try
+            {
+                _ = FirebaseApp.DefaultInstance;
+            }
+            catch
+            {
+                try
+                {
+                    FirebaseApp.Create(new AppOptions()
+                    {
+                        Credential = GoogleCredential.FromFile(serviceAccountPath)
+                    });
+                    loggerFactory.CreateLogger("FirebaseInit").LogInformation("Firebase initialized successfully.");
+                }
+                catch (Exception ex)
+                {
+                    loggerFactory.CreateLogger("FirebaseInit").LogError(ex, "Failed to initialize Firebase. Push notifications will not work.");
+                }
+            }
+        }
     }
 }
 

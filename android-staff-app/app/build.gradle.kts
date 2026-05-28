@@ -15,19 +15,28 @@ android {
         versionCode = 1
         versionName = "1.0.0"
 
-        buildConfigField("String", "WEB_APP_URL", '"https://example.com/#/staff"')
-        buildConfigField("String", "API_BASE_URL", '"https://example.com"')
+        buildConfigField("String", "WEB_APP_URL", "\"https://example.com/#/staff\"")
+        buildConfigField("String", "API_BASE_URL", "\"https://example.com\"")
     }
 
     buildFeatures {
         buildConfig = true
     }
 
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    kotlinOptions {
+        jvmTarget = "21"
+    }
+
     buildTypes {
         debug {
             versionNameSuffix = "-debug"
-            buildConfigField("String", "WEB_APP_URL", '"https://10.0.2.2:5001/#/staff"')
-            buildConfigField("String", "API_BASE_URL", '"https://10.0.2.2:5001"')
+            buildConfigField("String", "WEB_APP_URL", "\"https://10.0.2.2:5001/#/staff\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://10.0.2.2:5001\"")
         }
         release {
             isMinifyEnabled = true

@@ -24,3 +24,6 @@ android-staff-app/app/google-services.json
 # OS
 .DS_Store
 Thumbs.db
+
+# Firebase service account credentials
+**/firebase-service-account.json

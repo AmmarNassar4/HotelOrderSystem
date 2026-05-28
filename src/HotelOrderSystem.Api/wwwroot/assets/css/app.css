@@ -649,6 +649,7 @@ tr:last-child td {
 .toast.success { background: #05603a; }
 .toast.error { background: #b42318; }
 .toast.warning { background: #93370d; }
+.toast.notification { background: var(--primary); box-shadow: 0 0 0 2px rgba(21,94,239,.3); }
 
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(8px); }
