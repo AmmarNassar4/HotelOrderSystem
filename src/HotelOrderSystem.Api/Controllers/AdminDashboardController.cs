@@ -25,13 +25,13 @@ public sealed class AdminDashboardController : ControllerBase
         var onlineStaff = await _db.UserPresences.CountAsync(x => x.IsOnline, cancellationToken);
         var readyStaff = await _db.UserPresences.CountAsync(x => x.IsOnline && x.IsReady, cancellationToken);
         var summary = new DashboardSummaryDto(
-            await _db.Orders.CountAsync(x => x.Status == OrderStatuses.Pending, cancellationToken),
-            await _db.Orders.CountAsync(x => x.Status == OrderStatuses.Accepted || x.Status == OrderStatuses.InProgress, cancellationToken),
-            onlineStaff,
-            readyStaff,
-            Math.Max(0, onlineStaff - readyStaff),
-            await _db.Rooms.CountAsync(x => x.IsActive, cancellationToken),
-            DateTime.UtcNow);
+            PendingOrders: await _db.Orders.CountAsync(x => x.Status == OrderStatuses.Pending, cancellationToken),
+            AcceptedOrders: await _db.Orders.CountAsync(x => x.Status == OrderStatuses.Accepted || x.Status == OrderStatuses.InProgress, cancellationToken),
+            OnlineStaff: onlineStaff,
+            ActiveRooms: await _db.Rooms.CountAsync(x => x.IsActive, cancellationToken),
+            ServerTimeUtc: DateTime.UtcNow,
+            ReadyStaff: readyStaff,
+            NotReadyStaff: Math.Max(0, onlineStaff - readyStaff));
 
         return Ok(ApiResponse<DashboardSummaryDto>.Success(summary));
     }
