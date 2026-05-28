@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#101828" />
   <title>Hotel Order System</title>
   <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/assets/img/icon-192.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/assets/css/app.css?v=4" />
 </head>
 <body>
@@ -46,10 +47,65 @@
         return d;
       }
 
-      // Register cache SW
-      try { await navigator.serviceWorker.register("/sw.js"); } catch(e) {}
+      function waitForServiceWorkerActivation(registration) {
+        if (registration.active) return Promise.resolve(registration);
 
-      // Create messaging — Firebase will auto-register firebase-messaging-sw.js
+        var worker = registration.installing || registration.waiting;
+        if (!worker) {
+          return new Promise(function(resolve, reject) {
+            setTimeout(function() {
+              if (registration.active) resolve(registration);
+              else reject(new Error("FCM service worker is not active."));
+            }, 500);
+          });
+        }
+
+        if (worker.state === "activated") return Promise.resolve(registration);
+
+        return new Promise(function(resolve, reject) {
+          var timeout = setTimeout(function() {
+            worker.removeEventListener("statechange", onStateChange);
+            reject(new Error("FCM service worker activation timeout."));
+          }, 10000);
+
+          function onStateChange() {
+            if (worker.state === "activated") {
+              clearTimeout(timeout);
+              worker.removeEventListener("statechange", onStateChange);
+              resolve(registration);
+            }
+
+            if (worker.state === "redundant") {
+              clearTimeout(timeout);
+              worker.removeEventListener("statechange", onStateChange);
+              reject(new Error("FCM service worker became redundant."));
+            }
+          }
+
+          worker.addEventListener("statechange", onStateChange);
+        });
+      }
+
+      async function registerFcmServiceWorker() {
+        var registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js", {
+          scope: "/firebase-cloud-messaging-push-scope"
+        });
+
+        return waitForServiceWorkerActivation(registration);
+      }
+
+      // Register cache SW
+      try { await navigator.serviceWorker.register("/sw.js"); } catch(e) { console.warn("[SW] Cache SW registration failed:", e); }
+
+      var fcmServiceWorkerRegistration;
+      try {
+        fcmServiceWorkerRegistration = await registerFcmServiceWorker();
+        console.log("[FCM] Service worker active.");
+      } catch(e) {
+        console.error("[FCM] Service worker registration failed:", e);
+        return;
+      }
+
       var m = firebase.messaging();
       console.log("[FCM] Messaging instance created.");
 
@@ -81,7 +137,10 @@
         try {
           var perm = await Notification.requestPermission();
           if (perm !== "granted") { console.log("[FCM] Permission denied."); return; }
-          var token = await m.getToken({ vapidKey: VAPID });
+          var token = await m.getToken({
+            vapidKey: VAPID,
+            serviceWorkerRegistration: fcmServiceWorkerRegistration
+          });
           console.log("[FCM] Token:", token);
 
           var apiBase = localStorage.getItem("hotel.ops.apiBase") || "";
