@@ -1545,13 +1545,24 @@
     renderLogin();
   }
 
+
+  function shouldAutoRefresh() {
+    const route = normalizeHash();
+    return [
+      "admin/dashboard",
+      "admin/orders",
+      "admin/performance",
+      "admin/presence",
+      "staff/tasks"
+    ].includes(route);
+  }
   function startHeartbeat() {
     if (state.heartbeatTimer) return;
     sendHeartbeat();
     state.heartbeatTimer = setInterval(sendHeartbeat, 60000);
     if (!state.pollingTimer) {
       state.pollingTimer = setInterval(() => {
-        if (document.hidden || !isLoggedIn()) return;
+        if (document.hidden || !isLoggedIn() || !shouldAutoRefresh()) return;
         const now = Date.now();
         if (now - state.lastRefreshAt > 30000) refreshCurrentPage();
       }, 30000);
