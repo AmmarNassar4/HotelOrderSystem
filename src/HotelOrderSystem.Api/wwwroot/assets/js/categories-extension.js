@@ -2,6 +2,7 @@
   "use strict";
 
   const SESSION_KEY = "hotel.ops.session";
+  const catalogCache = new Map();
 
   function session() {
     try { return JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); }
@@ -10,6 +11,10 @@
 
   function token() {
     return session()?.token || "";
+  }
+
+  function isAdmin() {
+    return session()?.user?.role === "Admin";
   }
 
   function apiBase() {
@@ -36,6 +41,10 @@
     return String(value ?? "").replace(/[&<>'"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
   }
 
+  function attr(value) {
+    return h(value).replaceAll("\n", " ");
+  }
+
   function toast(message, type = "success") {
     const host = document.getElementById("toast");
     if (!host) return alert(message);
@@ -46,12 +55,16 @@
     setTimeout(() => el.remove(), 3500);
   }
 
+  function currentRoute() {
+    return location.hash.replace(/^#\/?/, "");
+  }
+
   function removeDemoLogins() {
     document.querySelectorAll(".demo-logins").forEach(x => x.remove());
   }
 
   function ensureCategoryNav() {
-    if (!token()) return;
+    if (!token() || !isAdmin()) return;
     const sidebar = document.querySelector(".sidebar-nav, nav");
     if (!sidebar || sidebar.querySelector('[href="#/admin/item-categories"]')) return;
     const itemsLink = sidebar.querySelector('[href="#/admin/items"]');
@@ -64,7 +77,7 @@
 
   async function renderCategoriesPage() {
     const app = document.getElementById("app");
-    if (!app || !token()) return;
+    if (!app || !token() || !isAdmin()) return;
     app.innerHTML = `<main class="main"><header class="topbar"><div><h1>Item Categories</h1><p>Every item must be linked to an active category before it can be created.</p></div></header><section class="card">Loading categories...</section></main>`;
     const categories = await api("/api/v1/admin/item-categories");
     app.innerHTML = `
@@ -72,7 +85,7 @@
         <header class="topbar"><div><h1>Item Categories</h1><p>Create categories first, then link items and services to them.</p></div></header>
         <div class="grid grid-2">
           <form class="card grid" data-category-form>
-            <div class="card-header"><div><h2 class="card-title">Add category</h2><p class="card-subtitle">Categories are required for item creation.</p></div></div>
+            <div class="card-header"><div><h2 class="card-title">Add category</h2><p class="card-subtitle">Categories are required for item and service creation.</p></div></div>
             <input type="hidden" name="id" />
             <div class="field"><label>Category name</label><input name="name" required /></div>
             <div class="field"><label>Description</label><textarea name="description" rows="3"></textarea></div>
@@ -107,6 +120,89 @@
     if (typeField) typeField.before(wrap); else form.querySelector('.form-grid')?.prepend(wrap);
   }
 
+  function normalizeItems(items) {
+    return (items || []).filter(x => x && x.isActive !== false).map(x => ({
+      itemId: x.itemId,
+      name: x.name || `Item ${x.itemId}`,
+      targetTeamName: x.targetTeamName || "",
+      baseProperties: x.baseProperties || '{"fields":[]}',
+      itemCategoryId: String(x.itemCategoryId || ""),
+      itemCategoryName: x.itemCategoryName || "Uncategorized"
+    }));
+  }
+
+  function categoriesFromItems(items) {
+    const map = new Map();
+    items.forEach(item => {
+      if (!item.itemCategoryId) return;
+      if (!map.has(item.itemCategoryId)) map.set(item.itemCategoryId, item.itemCategoryName || "Uncategorized");
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async function loadOrderCatalog() {
+    const route = currentRoute();
+    const key = route.startsWith("guest/") ? route : (isAdmin() ? "admin" : "staff");
+    if (catalogCache.has(key)) return catalogCache.get(key);
+
+    let items = [];
+    if (route.startsWith("guest/")) {
+      const payload = route.split("/")[1] || "";
+      const catalog = await api(`/api/v1/guest/rooms/${encodeURIComponent(payload)}/catalog`);
+      items = normalizeItems(catalog.items || []);
+    } else if (isAdmin()) {
+      items = normalizeItems(await api("/api/v1/admin/items"));
+    } else {
+      items = normalizeItems(await api("/api/v1/items"));
+    }
+
+    const result = { items, categories: categoriesFromItems(items) };
+    catalogCache.set(key, result);
+    return result;
+  }
+
+  async function enhanceOrderCategoryPickers() {
+    const forms = Array.from(document.querySelectorAll('form[data-form="auth-line"], form[data-form="guest-line"]'));
+    if (!forms.length) return;
+    const catalog = await loadOrderCatalog();
+
+    forms.forEach(form => {
+      if (form.dataset.categoryPickerReady === "true") return;
+      const itemSelect = form.querySelector('select[name="itemId"]');
+      const itemField = itemSelect?.closest(".field");
+      if (!itemSelect || !itemField) return;
+
+      const categoryField = document.createElement("div");
+      categoryField.className = "field";
+      categoryField.innerHTML = `
+        <label>Category</label>
+        <select name="categoryId" data-order-category required>
+          <option value="">Choose category</option>
+          ${catalog.categories.map(c => `<option value="${attr(c.id)}">${h(c.name)}</option>`).join("")}
+        </select>`;
+      itemField.before(categoryField);
+      itemSelect.innerHTML = '<option value="">Choose category first</option>';
+      itemSelect.disabled = true;
+      form.dataset.categoryPickerReady = "true";
+    });
+  }
+
+  function updateItemOptions(categorySelect) {
+    const form = categorySelect.closest("form");
+    const itemSelect = form?.querySelector('select[name="itemId"]');
+    if (!form || !itemSelect) return;
+
+    loadOrderCatalog().then(catalog => {
+      const selectedCategory = String(categorySelect.value || "");
+      const filtered = catalog.items.filter(x => x.itemCategoryId === selectedCategory);
+      itemSelect.disabled = filtered.length === 0;
+      itemSelect.innerHTML = filtered.length
+        ? filtered.map(item => `<option value="${attr(item.itemId)}" data-name="${attr(item.name)}" data-props="${attr(item.baseProperties)}">${h(item.name)}${item.targetTeamName ? " - " + h(item.targetTeamName) : ""}</option>`).join("")
+        : '<option value="">No active items in this category</option>';
+      itemSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    }).catch(err => toast(err.message, "error"));
+  }
+
   function collectSchema(form) {
     const fields = [];
     form.querySelectorAll('[data-attribute-row]').forEach((row, index) => {
@@ -116,14 +212,7 @@
       if (!key) key = `field_${index + 1}`;
       const type = row.querySelector('[data-schema-type]')?.value || "text";
       const options = (row.querySelector('[data-schema-options]')?.value || "").split(",").map(x => x.trim()).filter(Boolean);
-      fields.push({
-        key,
-        label,
-        type,
-        required: Boolean(row.querySelector('[data-schema-required]')?.checked),
-        defaultValue: row.querySelector('[data-schema-default]')?.value || null,
-        options
-      });
+      fields.push({ key, label, type, required: Boolean(row.querySelector('[data-schema-required]')?.checked), defaultValue: row.querySelector('[data-schema-default]')?.value || null, options });
     });
     return JSON.stringify({ fields });
   }
@@ -138,6 +227,7 @@
         method: data.id ? "PUT" : "POST",
         body: { name: data.name.trim(), description: data.description?.trim() || null, isActive: data.isActive === "true" }
       });
+      catalogCache.clear();
       toast("Category saved");
       renderCategoriesPage().catch(e => toast(e.message, "error"));
       return;
@@ -157,15 +247,9 @@
       const data = Object.fromEntries(new FormData(itemForm));
       await api(`/api/v1/admin/catalog-items${data.id ? "/" + data.id : ""}`, {
         method: data.id ? "PUT" : "POST",
-        body: {
-          name: data.name.trim(),
-          type: data.type,
-          itemCategoryId: categoryId,
-          targetTeamId: data.targetTeamId ? Number(data.targetTeamId) : null,
-          baseProperties: collectSchema(itemForm),
-          isActive: data.isActive === "true"
-        }
+        body: { name: data.name.trim(), type: data.type, itemCategoryId: categoryId, targetTeamId: data.targetTeamId ? Number(data.targetTeamId) : null, baseProperties: collectSchema(itemForm), isActive: data.isActive === "true" }
       });
+      catalogCache.clear();
       toast("Item saved");
       location.hash = "#/admin/items";
       setTimeout(() => location.reload(), 300);
@@ -190,25 +274,39 @@
     if (del) {
       if (!confirm("Delete this category? Categories linked to items cannot be deleted.")) return;
       await api(`/api/v1/admin/item-categories/${del.dataset.deleteCategory}`, { method: "DELETE" });
+      catalogCache.clear();
       toast("Category deleted");
       renderCategoriesPage().catch(e => toast(e.message, "error"));
     }
   });
 
+  document.addEventListener("change", event => {
+    const categorySelect = event.target.closest('[data-order-category]');
+    if (categorySelect) updateItemOptions(categorySelect);
+  }, true);
+
   async function route() {
     removeDemoLogins();
     ensureCategoryNav();
-    if (location.hash.replace(/^#\/?/, "") === "admin/item-categories") {
+    if (currentRoute() === "admin/item-categories") {
       try { await renderCategoriesPage(); }
       catch (err) { toast(err.message, "error"); }
       return;
     }
-    if (location.hash.includes("admin/items")) {
+    if (currentRoute().includes("admin/items")) {
       setTimeout(() => enhanceItemsPage().catch(e => toast(e.message, "error")), 500);
+    }
+    if (["admin/create-order", "staff/create-order"].includes(currentRoute()) || currentRoute().startsWith("guest/")) {
+      setTimeout(() => enhanceOrderCategoryPickers().catch(e => toast(e.message, "error")), 500);
     }
   }
 
   window.addEventListener("hashchange", () => setTimeout(route, 50));
-  new MutationObserver(() => { removeDemoLogins(); ensureCategoryNav(); if (location.hash.includes("admin/items")) enhanceItemsPage().catch(() => {}); }).observe(document.body, { childList: true, subtree: true });
+  new MutationObserver(() => {
+    removeDemoLogins();
+    ensureCategoryNav();
+    if (currentRoute().includes("admin/items")) enhanceItemsPage().catch(() => {});
+    if (["admin/create-order", "staff/create-order"].includes(currentRoute()) || currentRoute().startsWith("guest/")) enhanceOrderCategoryPickers().catch(() => {});
+  }).observe(document.body, { childList: true, subtree: true });
   setTimeout(route, 800);
 })();
