@@ -46,6 +46,10 @@
     setTimeout(() => el.remove(), 3500);
   }
 
+  function removeDemoLogins() {
+    document.querySelectorAll(".demo-logins").forEach(x => x.remove());
+  }
+
   function ensureCategoryNav() {
     if (!token()) return;
     const sidebar = document.querySelector(".sidebar-nav, nav");
@@ -54,7 +58,7 @@
     if (!itemsLink) return;
     const a = document.createElement("a");
     a.href = "#/admin/item-categories";
-    a.innerHTML = "<span>🗂️</span><span>Item Categories</span>";
+    a.innerHTML = "<span class='nav-icon'>🗂️</span><span>Categories</span>";
     itemsLink.before(a);
   }
 
@@ -192,6 +196,7 @@
   });
 
   async function route() {
+    removeDemoLogins();
     ensureCategoryNav();
     if (location.hash.replace(/^#\/?/, "") === "admin/item-categories") {
       try { await renderCategoriesPage(); }
@@ -204,6 +209,6 @@
   }
 
   window.addEventListener("hashchange", () => setTimeout(route, 50));
-  new MutationObserver(() => { ensureCategoryNav(); if (location.hash.includes("admin/items")) enhanceItemsPage().catch(() => {}); }).observe(document.body, { childList: true, subtree: true });
+  new MutationObserver(() => { removeDemoLogins(); ensureCategoryNav(); if (location.hash.includes("admin/items")) enhanceItemsPage().catch(() => {}); }).observe(document.body, { childList: true, subtree: true });
   setTimeout(route, 800);
 })();
