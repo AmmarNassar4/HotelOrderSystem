@@ -75,14 +75,33 @@
     itemsLink.before(a);
   }
 
+  async function openCategoriesPage() {
+    if (!token() || !isAdmin()) return;
+    if (currentRoute() !== "admin/item-categories") {
+      history.pushState(null, "", "#/admin/item-categories");
+    }
+    await renderCategoriesPage();
+  }
+
+  document.addEventListener("click", event => {
+    const link = event.target.closest('a[href="#/admin/item-categories"]');
+    if (!link) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    openCategoriesPage().catch(err => toast(err.message, "error"));
+  }, true);
+
   async function renderCategoriesPage() {
     const app = document.getElementById("app");
     if (!app || !token() || !isAdmin()) return;
-    app.innerHTML = `<main class="main"><header class="topbar"><div><h1>Item Categories</h1><p>Every item must be linked to an active category before it can be created.</p></div></header><section class="card">Loading categories...</section></main>`;
+    app.innerHTML = `<main class="main"><header class="topbar"><div><h1>Item Categories</h1><p>Every item must be linked to an active category before it can be created.</p></div><div class="topbar-meta"><a class="btn btn-soft" href="#/admin/dashboard">Dashboard</a><a class="btn btn-soft" href="#/admin/items">Items & Services</a></div></header><section class="card">Loading categories...</section></main>`;
     const categories = await api("/api/v1/admin/item-categories");
     app.innerHTML = `
       <main class="main">
-        <header class="topbar"><div><h1>Item Categories</h1><p>Create categories first, then link items and services to them.</p></div></header>
+        <header class="topbar">
+          <div><h1>Item Categories</h1><p>Create categories first, then link items and services to them.</p></div>
+          <div class="topbar-meta"><a class="btn btn-soft" href="#/admin/dashboard">Dashboard</a><a class="btn btn-soft" href="#/admin/items">Items & Services</a></div>
+        </header>
         <div class="grid grid-2">
           <form class="card grid" data-category-form>
             <div class="card-header"><div><h2 class="card-title">Add category</h2><p class="card-subtitle">Categories are required for item and service creation.</p></div></div>
@@ -95,7 +114,7 @@
           <section class="card">
             <div class="card-header"><h2 class="card-title">Category list</h2><span class="pill primary">${categories.length}</span></div>
             <div class="table-wrap"><table><thead><tr><th>Category</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-              ${categories.map(c => `<tr><td><strong>${h(c.name)}</strong><br><small>${h(c.description || "No description")}</small></td><td>${c.isActive ? '<span class="pill success">Active</span>' : '<span class="pill danger">Inactive</span>'}</td><td><div class="actions"><button class="btn btn-soft" data-edit-category='${h(JSON.stringify(c))}'>Edit</button><button class="btn btn-danger" data-delete-category="${c.itemCategoryId}">Delete</button></div></td></tr>`).join("")}
+              ${categories.map(c => `<tr><td><strong>${h(c.name)}</strong><br><small>${h(c.description || "No description")}</small></td><td>${c.isActive ? '<span class="pill success">Active</span>' : '<span class="pill danger">Inactive</span>'}</td><td><div class="actions"><button class="btn btn-soft" data-edit-category='${h(JSON.stringify(c))}'>Edit</button><button class="btn btn-danger" data-delete-category="${c.itemCategoryId}">Delete</button></div></td></tr>`).join("") || '<tr><td colspan="3">No categories yet.</td></tr>'}
             </tbody></table></div>
           </section>
         </div>
@@ -302,6 +321,7 @@
   }
 
   window.addEventListener("hashchange", () => setTimeout(route, 50));
+  window.addEventListener("popstate", () => setTimeout(route, 50));
   new MutationObserver(() => {
     removeDemoLogins();
     ensureCategoryNav();
