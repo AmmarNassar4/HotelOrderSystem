@@ -178,23 +178,23 @@ using (var scope = app.Services.CreateScope())
         {
             try
             {
-                _ = FirebaseApp.DefaultInstance;
-                firebaseLogger.LogInformation("Firebase already initialized.");
-            }
-            catch
-            {
-                try
+                var firebaseApp = FirebaseApp.DefaultInstance;
+                if (firebaseApp is null)
                 {
-                    FirebaseApp.Create(new AppOptions()
+                    FirebaseApp.Create(new AppOptions
                     {
                         Credential = GoogleCredential.FromFile(serviceAccountPath)
                     });
                     firebaseLogger.LogInformation("Firebase initialized successfully using service account: {ServiceAccountPath}", serviceAccountPath);
                 }
-                catch (Exception ex)
+                else
                 {
-                    firebaseLogger.LogError(ex, "Failed to initialize Firebase using service account: {ServiceAccountPath}. Push notifications will not work.", serviceAccountPath);
+                    firebaseLogger.LogInformation("Firebase already initialized: {FirebaseAppName}", firebaseApp.Name);
                 }
+            }
+            catch (Exception ex)
+            {
+                firebaseLogger.LogError(ex, "Failed to initialize Firebase using service account: {ServiceAccountPath}. Push notifications will not work.", serviceAccountPath);
             }
         }
     }
