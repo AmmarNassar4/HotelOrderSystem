@@ -156,12 +156,30 @@ using (var scope = app.Services.CreateScope())
     var notificationOptions = configuration.GetSection("Notifications").Get<NotificationOptions>();
     if (notificationOptions?.FcmMode != "Stub")
     {
-        var serviceAccountPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "firebase-service-account.json");
-        if (File.Exists(serviceAccountPath))
+        var firebaseLogger = loggerFactory.CreateLogger("FirebaseInit");
+        const string serviceAccountFileName = "firebase-service-account.json";
+        var candidateServiceAccountPaths = new[]
+        {
+            Path.Combine(app.Environment.ContentRootPath, serviceAccountFileName),
+            Path.Combine(AppContext.BaseDirectory, serviceAccountFileName),
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, serviceAccountFileName)
+        }
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
+        var serviceAccountPath = candidateServiceAccountPaths.FirstOrDefault(File.Exists);
+        if (serviceAccountPath is null)
+        {
+            firebaseLogger.LogWarning(
+                "Firebase service account JSON was not found. Checked: {CheckedPaths}",
+                string.Join(" | ", candidateServiceAccountPaths));
+        }
+        else
         {
             try
             {
                 _ = FirebaseApp.DefaultInstance;
+                firebaseLogger.LogInformation("Firebase already initialized.");
             }
             catch
             {
@@ -171,11 +189,11 @@ using (var scope = app.Services.CreateScope())
                     {
                         Credential = GoogleCredential.FromFile(serviceAccountPath)
                     });
-                    loggerFactory.CreateLogger("FirebaseInit").LogInformation("Firebase initialized successfully.");
+                    firebaseLogger.LogInformation("Firebase initialized successfully using service account: {ServiceAccountPath}", serviceAccountPath);
                 }
                 catch (Exception ex)
                 {
-                    loggerFactory.CreateLogger("FirebaseInit").LogError(ex, "Failed to initialize Firebase. Push notifications will not work.");
+                    firebaseLogger.LogError(ex, "Failed to initialize Firebase using service account: {ServiceAccountPath}. Push notifications will not work.", serviceAccountPath);
                 }
             }
         }
