@@ -121,9 +121,47 @@
       </main>`;
   }
 
+  function cleanupDuplicateItemCategoryFields(form) {
+    const selects = Array.from(form.querySelectorAll('select[name="itemCategoryId"]'));
+    if (selects.length <= 1) return;
+    selects.slice(1).forEach(select => select.closest(".field")?.remove());
+  }
+
+  function isBlankAttributeRow(row) {
+    const label = row.querySelector("[data-schema-label]")?.value?.trim();
+    const key = row.querySelector("[data-schema-key]")?.value?.trim();
+    const def = row.querySelector("[data-schema-default]")?.value?.trim();
+    const options = row.querySelector("[data-schema-options]")?.value?.trim();
+    const required = row.querySelector("[data-schema-required]")?.checked;
+    return !label && !key && !def && !options && !required;
+  }
+
+  function emptyDynamicFieldsMarkup() {
+    return '<div class="empty compact-empty" data-empty-dynamic-fields>No dynamic fields. Click Add field only when this item needs extra information.</div>';
+  }
+
+  function cleanupDynamicItemFields(form, force = false) {
+    if (!form || (!force && form.dataset.dynamicFieldsCleaned === "true")) return;
+    const rowsContainer = form.querySelector("[data-attribute-rows]");
+    if (!rowsContainer) return;
+    const rows = Array.from(rowsContainer.querySelectorAll("[data-attribute-row]"));
+    if (rows.length === 0) {
+      rowsContainer.innerHTML = emptyDynamicFieldsMarkup();
+    } else if (rows.every(isBlankAttributeRow)) {
+      rows.forEach(row => row.remove());
+      rowsContainer.innerHTML = emptyDynamicFieldsMarkup();
+    }
+    form.dataset.dynamicFieldsCleaned = "true";
+  }
+
   async function enhanceItemsPage() {
     const form = document.querySelector('form[data-form="item"]');
-    if (!form || form.querySelector('[name="itemCategoryId"]')) return;
+    if (!form) return;
+
+    cleanupDuplicateItemCategoryFields(form);
+    cleanupDynamicItemFields(form);
+
+    if (form.querySelector('[name="itemCategoryId"]')) return;
     const categories = await api("/api/v1/admin/item-categories");
     const active = categories.filter(c => c.isActive);
     const currentItemId = form.querySelector('[name="id"]')?.value;
@@ -233,8 +271,22 @@
       const options = (row.querySelector('[data-schema-options]')?.value || "").split(",").map(x => x.trim()).filter(Boolean);
       fields.push({ key, label, type, required: Boolean(row.querySelector('[data-schema-required]')?.checked), defaultValue: row.querySelector('[data-schema-default]')?.value || null, options });
     });
-    return JSON.stringify({ fields });
+    return fields.length ? JSON.stringify({ fields }) : null;
   }
+
+  document.addEventListener("click", event => {
+    const addField = event.target.closest('[data-action="add-attribute-field"]');
+    if (addField) {
+      addField.closest("[data-attribute-builder]")?.querySelector("[data-empty-dynamic-fields]")?.remove();
+      return;
+    }
+
+    const removeField = event.target.closest('[data-action="remove-attribute-field"]');
+    if (removeField) {
+      const form = removeField.closest('form[data-form="item"]');
+      setTimeout(() => cleanupDynamicItemFields(form, true), 0);
+    }
+  }, true);
 
   document.addEventListener("submit", async event => {
     const categoryForm = event.target.closest('[data-category-form]');
@@ -254,6 +306,7 @@
 
     const itemForm = event.target.closest('form[data-form="item"]');
     if (itemForm) {
+      cleanupDuplicateItemCategoryFields(itemForm);
       const categoryId = Number(itemForm.querySelector('[name="itemCategoryId"]')?.value || 0);
       if (!categoryId) {
         event.preventDefault();
