@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#101828" />
   <title>Hotel Order System</title>
   <link rel="manifest" href="/manifest.webmanifest" />
-  <link rel="stylesheet" href="/assets/css/app.css" />
+  <link rel="stylesheet" href="/assets/css/app.css?v=4" />
 </head>
 <body>
   <div id="toast" aria-live="polite"></div>
@@ -33,130 +33,80 @@
     });
     firebase.analytics();
 
-    const VAPID_KEY = "BD4K-0P4Yqz1lS2IV-xbe0J1XXedxDJBAkxx_2r9HgdpEUTemAY-DEgeR0iUXlJKTqhKvEDwDS_qNsqpedhh1WM";
-    const SESSION_KEY = "hotel.ops.session";
-    const DEVICE_KEY = "hotel.ops.deviceId";
+    (async function() {
+      if (!("serviceWorker" in navigator)) { console.log("[FCM] SW not supported."); return; }
 
-    function loadSession() {
-      try { return JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); } catch { return null; }
-    }
+      var VAPID = "BD4K-0P4Yqz1lS2IV-xbe0J1XXedxDJBAkxx_2r9HgdpEUTemAY-DEgeR0iUXlJKTqhKvEDwDS_qNsqpedhh1WM";
+      var SKEY = "hotel.ops.session";
+      var DKEY = "hotel.ops.deviceId";
 
-    function getDeviceId() {
-      let id = localStorage.getItem(DEVICE_KEY);
-      if (!id) { id = "web-" + Math.random().toString(16).slice(2) + Date.now().toString(16); localStorage.setItem(DEVICE_KEY, id); }
-      return id;
-    }
-
-    let fcmMessaging = null;
-
-    async function getFcmMessaging() {
-      if (!fcmMessaging) {
-        fcmMessaging = firebase.messaging();
+      function deviceId() {
+        var d = localStorage.getItem(DKEY);
+        if (!d) { d = "web-" + crypto.randomUUID(); localStorage.setItem(DKEY, d); }
+        return d;
       }
-      return fcmMessaging;
-    }
 
-    async function requestPermissionAndGetToken() {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") { console.log("Notification permission denied."); return; }
-      try {
-        const messaging = await getFcmMessaging();
-        const token = await messaging.getToken({ vapidKey: VAPID_KEY });
-        if (token) return token;
-      } catch (err) { console.error("FCM getToken error:", err); }
-    }
+      // Register cache SW
+      try { await navigator.serviceWorker.register("/sw.js"); } catch(e) {}
 
-    async function registerFcmToken(token) {
-      const session = loadSession();
-      if (!session?.token) return;
-      try {
-        const apiBase = localStorage.getItem("hotel.ops.apiBase") || "";
-        await fetch(apiBase + "/api/v1/auth/device-token", {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + session.token
-          },
-          body: JSON.stringify({
-            deviceId: getDeviceId(),
-            platform: "Web",
-            appVersion: "1.0.0",
-            fcmToken: token
-          })
-        });
-        console.log("FCM token registered successfully.");
-      } catch (err) { console.error("FCM register error:", err); }
-    }
+      // Create messaging — Firebase will auto-register firebase-messaging-sw.js
+      var m = firebase.messaging();
+      console.log("[FCM] Messaging instance created.");
 
-    async function handleForegroundMessage(payload) {
-      if (!payload.notification) return;
-      const host = document.getElementById("toast");
-      if (!host) return;
-      const node = document.createElement("div");
-      node.className = "toast notification";
-      node.style.cursor = "pointer";
-      node.innerHTML = `<strong>${payload.notification.title || "New Order"}</strong><br>${payload.notification.body || ""}`;
-      node.onclick = () => { window.appRefresh?.(); node.remove(); };
-      host.appendChild(node);
-      setTimeout(() => node.remove(), 8000);
-    }
+      // Foreground messages
+      m.onMessage(function(p) {
+        console.log("[FCM] Foreground message:", p);
+        if (!p.notification) return;
+        var host = document.getElementById("toast");
+        if (!host) return;
+        var n = document.createElement("div");
+        n.className = "toast notification";
+        n.innerHTML = "<strong>" + (p.notification.title || "Notification") + "</strong><br>" + (p.notification.body || "");
+        n.style.cursor = "pointer";
+        n.onclick = function() { window.appRefresh && window.appRefresh(); n.remove(); };
+        host.appendChild(n);
+        setTimeout(function() { n.remove(); }, 8000);
+      });
 
-    let swRegistration = null;
+      // Poll for login then get token
+      var interval = setInterval(async function() {
+        var raw = localStorage.getItem(SKEY);
+        if (!raw) return;
+        var sess;
+        try { sess = JSON.parse(raw); } catch(e) { return; }
+        if (!sess || !sess.token) return;
+        clearInterval(interval);
 
-    async function registerServiceWorker() {
-      if (swRegistration) return swRegistration;
-      swRegistration = await navigator.serviceWorker.register("/sw.js");
-      console.log("SW registered:", swRegistration.scope);
-      return swRegistration;
-    }
-
-    async function initMessaging() {
-      if (!window.fcmInitDone) {
-        window.fcmInitDone = true;
-        console.log("Initializing FCM...");
-
+        console.log("[FCM] User logged in. Getting token...");
         try {
-          const reg = await registerServiceWorker();
-          const messaging = await getFcmMessaging();
-          messaging.useServiceWorker(reg);
-          console.log("FCM SW linked successfully.");
-        } catch (err) {
-          console.error("FCM init error:", err);
-          return;
+          var perm = await Notification.requestPermission();
+          if (perm !== "granted") { console.log("[FCM] Permission denied."); return; }
+          var token = await m.getToken({ vapidKey: VAPID });
+          console.log("[FCM] Token:", token);
+
+          var apiBase = localStorage.getItem("hotel.ops.apiBase") || "";
+          await fetch(apiBase + "/api/v1/auth/device-token", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + sess.token
+            },
+            body: JSON.stringify({
+              deviceId: deviceId(),
+              platform: "Web",
+              appVersion: "1.0.0",
+              fcmToken: token
+            })
+          });
+          console.log("[FCM] Token registered!");
+          window.firebaseInitialized = true;
+        } catch(err) {
+          console.error("[FCM] Error:", err);
         }
+      }, 500);
 
-        messaging.onMessage(function(payload) {
-          console.log("FCM foreground message received:", payload);
-          handleForegroundMessage(payload);
-        });
-
-        const checkInit = setInterval(async function() {
-          const session = loadSession();
-          if (!session?.token) return;
-          clearInterval(checkInit);
-          console.log("User logged in, getting FCM token...");
-
-          try {
-            const permission = await Notification.requestPermission();
-            if (permission !== "granted") { console.log("Notification permission denied."); return; }
-            const token = await messaging.getToken({ vapidKey: VAPID_KEY });
-            if (token) {
-              console.log("FCM Token:", token);
-              await registerFcmToken(token);
-              window.firebaseInitialized = true;
-            }
-          } catch (err) { console.error("FCM getToken error:", err); }
-        }, 1000);
-
-        setTimeout(function() { clearInterval(checkInit); }, 15000);
-      }
-    }
-
-    if ("serviceWorker" in navigator && "PushManager" in window) {
-      initMessaging();
-    } else {
-      console.warn("Push notifications not supported in this browser.");
-    }
+      setTimeout(function() { clearInterval(interval); }, 30000);
+    })();
   </script>
   <script src="/assets/js/app.js" defer></script>
   <script src="/assets/js/categories-extension.js" defer></script>
