@@ -327,7 +327,7 @@
 
   function attributeBuilderMarkup(baseProperties) {
     const fields = parseAttributeSchema(baseProperties);
-    const rows = fields.length ? fields.map(attributeFieldRow).join("") : attributeFieldRow({ label: "", key: "", type: "text" }, 0);
+    const rows = fields.length ? fields.map(attributeFieldRow).join("") : `<div class="empty compact-empty" data-empty-dynamic-fields>No dynamic fields. Click Add field only when needed.</div>`;
     return `
       <div class="field span-2">
         <label>Dynamic item fields</label>
@@ -406,7 +406,7 @@
       });
     });
 
-    return JSON.stringify({ fields });
+    return fields.length ? JSON.stringify({ fields }) : null;
   }
 
   function schemaSummary(baseProperties) {
@@ -1010,8 +1010,9 @@
 
   async function renderItems() {
     setView(pageShell("Items & Services", loadingBlock()));
-    const [items, teams] = await Promise.all([loadItems(), loadTeams()]);
+    const [items, teams, categories] = await Promise.all([loadItems(), loadTeams(), api("/api/v1/admin/item-categories")]);
     const editing = state.editing.itemId ? items.find(x => String(x.itemId) === String(state.editing.itemId)) : null;
+    const activeCategories = (categories || []).filter(c => c.isActive !== false);
 
     const form = `
       <form class="card grid" data-form="item">
@@ -1027,6 +1028,13 @@
           <div class="field">
             <label>Name</label>
             <input name="name" value="${attr(editing?.name || "")}" required />
+          </div>
+          <div class="field">
+            <label>Category</label>
+            <select name="itemCategoryId" required>
+              ${option("", activeCategories.length ? "Choose category" : "Create a category first", editing?.itemCategoryId ?? "")}
+              ${activeCategories.map(c => option(c.itemCategoryId, c.name, editing?.itemCategoryId ?? "")).join("")}
+            </select>
           </div>
           <div class="field">
             <label>Type</label>
@@ -1753,6 +1761,7 @@
         const builder = button.closest("[data-attribute-builder]");
         const rows = builder?.querySelector("[data-attribute-rows]");
         if (rows) {
+          rows.querySelector("[data-empty-dynamic-fields]")?.remove();
           rows.insertAdjacentHTML("beforeend", attributeFieldRow({ label: "", key: "", type: "text" }, rows.querySelectorAll("[data-attribute-row]").length));
         }
         return;
@@ -1948,6 +1957,7 @@
         body = {
           name: data.name.trim(),
           type: data.type,
+          itemCategoryId: data.itemCategoryId ? Number(data.itemCategoryId) : 0,
           targetTeamId: data.targetTeamId ? Number(data.targetTeamId) : null,
           baseProperties,
           isActive: data.isActive === "true"
