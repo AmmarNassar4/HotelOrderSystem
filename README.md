@@ -54,9 +54,7 @@ This lets the API create the database schema on first run for development. For p
 | Username | Password | Role |
 | --- | --- | --- |
 | admin | admin123 | Admin |
-| housekeeping | staff123 | Staff |
-| maintenance | staff123 | Staff |
-| restaurant | staff123 | Staff |
+
 
 ## Important production TODOs
 
