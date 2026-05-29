@@ -259,6 +259,93 @@
     if (categorySelect) updateItemOptions(categorySelect);
   }, true);
 
+  function enhanceItemCategoryField() {
+    if (currentRoute() !== "admin/items") return;
+    const form = document.querySelector('[data-form="item"]');
+    if (!form || form.dataset.categoryInlineReady === "true") return;
+
+    const catSelect = form.querySelector('select[name="itemCategoryId"]');
+    const catField = catSelect?.closest(".field");
+    if (!catSelect || !catField) return;
+
+    form.dataset.categoryInlineReady = "true";
+
+    // Row: [select] [+ New button]
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:8px;align-items:stretch";
+    catField.insertBefore(row, catSelect);
+    catSelect.style.flex = "1";
+    row.appendChild(catSelect);
+
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "btn btn-soft";
+    addBtn.style.cssText = "flex-shrink:0;white-space:nowrap;font-size:13px";
+    addBtn.textContent = "+ New";
+    row.appendChild(addBtn);
+
+    // Inline mini-form (hidden by default)
+    const mini = document.createElement("div");
+    mini.style.cssText = "display:none;border:1px solid var(--line,#e4e7ec);border-radius:14px;padding:14px;background:var(--surface-2,#f9fafb);margin-top:6px";
+    mini.innerHTML = `
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted,#667085);margin-bottom:10px">New category</div>
+      <div class="field" style="margin-bottom:10px">
+        <label>Name</label>
+        <input data-new-cat-name required placeholder="Category name" />
+      </div>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="btn btn-primary" data-save-cat style="font-size:13px">Create</button>
+        <button type="button" class="btn btn-soft" data-cancel-cat style="font-size:13px">Cancel</button>
+      </div>
+    `;
+    catField.appendChild(mini);
+
+    addBtn.addEventListener("click", () => {
+      const open = mini.style.display !== "none";
+      mini.style.display = open ? "none" : "block";
+      if (!open) mini.querySelector("[data-new-cat-name]").focus();
+    });
+
+    mini.querySelector("[data-cancel-cat]").addEventListener("click", () => {
+      mini.style.display = "none";
+      mini.querySelector("[data-new-cat-name]").value = "";
+    });
+
+    mini.querySelector("[data-save-cat]").addEventListener("click", async () => {
+      const nameInput = mini.querySelector("[data-new-cat-name]");
+      const name = nameInput.value.trim();
+      if (!name) { nameInput.focus(); return; }
+
+      const saveBtn = mini.querySelector("[data-save-cat]");
+      saveBtn.disabled = true;
+      try {
+        const created = await api("/api/v1/admin/item-categories", {
+          method: "POST",
+          body: { name, description: null, isActive: true }
+        });
+        catalogCache.clear();
+
+        // Remove the "Create a category first" placeholder if it's the only option
+        const placeholder = catSelect.querySelector('option[value=""]');
+        if (placeholder && catSelect.options.length === 1) placeholder.remove();
+
+        const opt = document.createElement("option");
+        opt.value = created.itemCategoryId;
+        opt.textContent = created.name;
+        catSelect.appendChild(opt);
+        catSelect.value = created.itemCategoryId;
+
+        nameInput.value = "";
+        mini.style.display = "none";
+        toast(`Category "${name}" created`);
+      } catch (err) {
+        toast(err.message, "error");
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+  }
+
   async function route() {
     removeDemoLogins();
     ensureCategoryNav();
@@ -272,6 +359,10 @@
     if (["admin/create-order", "staff/create-order"].includes(currentRoute()) || currentRoute().startsWith("guest/")) {
       setTimeout(() => enhanceOrderCategoryPickers().catch(e => toast(e.message, "error")), 500);
     }
+
+    if (currentRoute() === "admin/items") {
+      setTimeout(enhanceItemCategoryField, 500);
+    }
   }
 
   window.addEventListener("hashchange", () => setTimeout(route, 50));
@@ -281,6 +372,9 @@
     ensureCategoryNav();
     if (["admin/create-order", "staff/create-order"].includes(currentRoute()) || currentRoute().startsWith("guest/")) {
       enhanceOrderCategoryPickers().catch(() => {});
+    }
+    if (currentRoute() === "admin/items") {
+      enhanceItemCategoryField();
     }
   }).observe(document.body, { childList: true, subtree: true });
   setTimeout(route, 800);
