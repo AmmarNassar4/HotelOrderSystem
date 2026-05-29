@@ -291,7 +291,7 @@
       <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted,#667085);margin-bottom:10px">New category</div>
       <div class="field" style="margin-bottom:10px">
         <label>Name</label>
-        <input data-new-cat-name required placeholder="Category name" />
+        <input data-new-cat-name placeholder="Category name" />
       </div>
       <div style="display:flex;gap:8px">
         <button type="button" class="btn btn-primary" data-save-cat style="font-size:13px">Create</button>
