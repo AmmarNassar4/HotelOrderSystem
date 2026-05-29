@@ -53,7 +53,7 @@
 
   <ItemGroup Condition="Exists('firebase-service-account.json')">
     <None Include="firebase-service-account.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 </Project>
