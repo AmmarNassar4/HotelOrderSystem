@@ -1,13 +1,6 @@
 package com.ibaapps.HotelOrderSystem.ui.navigation
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -17,6 +10,7 @@ import androidx.navigation.navArgument
 import com.ibaapps.HotelOrderSystem.ui.auth.AccessDeniedScreen
 import com.ibaapps.HotelOrderSystem.ui.auth.LoginScreen
 import com.ibaapps.HotelOrderSystem.ui.main.MainScaffold
+import com.ibaapps.HotelOrderSystem.ui.orders.OrderDetailsScreen
 import com.ibaapps.HotelOrderSystem.ui.splash.SplashScreen
 
 @Composable
@@ -73,22 +67,8 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
         composable(
             route = Routes.ORDER_DETAILS,
             arguments = listOf(navArgument(Routes.ARG_ORDER_ID) { type = NavType.IntType })
-        ) { backStackEntry ->
-            val orderId = backStackEntry.arguments?.getInt(Routes.ARG_ORDER_ID) ?: 0
-            // Placeholder; the real details screen is built in Task 11.
-            OrderDetailsPlaceholder(orderId)
+        ) {
+            OrderDetailsScreen(onBack = { navController.popBackStack() })
         }
-    }
-}
-
-@Composable
-private fun OrderDetailsPlaceholder(orderId: Int) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Order #$orderId", style = MaterialTheme.typography.titleLarge)
-        Text("Details screen lands in Task 11", style = MaterialTheme.typography.bodyMedium)
     }
 }
