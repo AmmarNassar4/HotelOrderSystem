@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.ibaapps.HotelOrderSystem.ui.auth.AccessDeniedScreen
+import com.ibaapps.HotelOrderSystem.ui.auth.LoginScreen
 import com.ibaapps.HotelOrderSystem.ui.theme.HotelStaffTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -38,19 +40,39 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * Root navigation host. Currently a single placeholder destination; the real
- * splash → login → main scaffold graph is built in Task 6.
+ * Root navigation host. Currently: login → home placeholder, plus the
+ * access-denied screen. The splash gate and bottom-nav scaffold are added in
+ * Task 6.
  */
 @Composable
 private fun StaffAppRoot() {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = "placeholder") {
-        composable("placeholder") { PlaceholderScreen() }
+    NavHost(navController = navController, startDestination = "login") {
+        composable("login") {
+            LoginScreen(
+                onAuthenticated = {
+                    navController.navigate("home") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                },
+                onAccessDenied = { navController.navigate("accessDenied") }
+            )
+        }
+        composable("accessDenied") {
+            AccessDeniedScreen(
+                onBackToLogin = {
+                    navController.navigate("login") {
+                        popUpTo("accessDenied") { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable("home") { HomePlaceholderScreen() }
     }
 }
 
 @Composable
-private fun PlaceholderScreen() {
+private fun HomePlaceholderScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -58,9 +80,9 @@ private fun PlaceholderScreen() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = "Hotel Staff", style = MaterialTheme.typography.headlineSmall)
+        Text(text = "Signed in", style = MaterialTheme.typography.headlineSmall)
         Text(
-            text = "Native app foundation ready",
+            text = "Main scaffold lands in Task 6",
             style = MaterialTheme.typography.bodyMedium
         )
     }
