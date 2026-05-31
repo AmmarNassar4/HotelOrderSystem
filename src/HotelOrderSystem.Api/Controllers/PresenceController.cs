@@ -22,7 +22,7 @@ public sealed class PresenceController : ControllerBase
     public async Task<ActionResult<ApiResponse<HeartbeatResponse>>> Heartbeat(HeartbeatRequest request, CancellationToken cancellationToken)
     {
         var result = await _presence.HeartbeatAsync(User.GetUserId(), request, cancellationToken);
-        return Ok(result);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
     }
 
     [HttpPut("availability")]

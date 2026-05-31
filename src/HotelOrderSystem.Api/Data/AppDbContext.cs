@@ -20,7 +20,6 @@ public sealed class AppDbContext : DbContext
     public DbSet<UserPresence> UserPresences => Set<UserPresence>();
     public DbSet<StaffAvailabilityLog> StaffAvailabilityLogs => Set<StaffAvailabilityLog>();
     public DbSet<NotificationOutbox> NotificationOutbox => Set<NotificationOutbox>();
-    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -195,16 +194,6 @@ public sealed class AppDbContext : DbContext
             entity.HasIndex(x => new { x.Status, x.CreatedAt });
         });
 
-        modelBuilder.Entity<AuditLog>(entity =>
-        {
-            entity.ToTable("AuditLogs");
-            entity.HasKey(x => x.AuditLogId);
-            entity.Property(x => x.Action).HasMaxLength(100).IsRequired();
-            entity.Property(x => x.EntityName).HasMaxLength(100).IsRequired();
-            entity.Property(x => x.EntityId).HasMaxLength(100).IsRequired();
-            entity.Property(x => x.Details).HasColumnType("nvarchar(max)");
-            entity.HasIndex(x => x.CreatedAt);
-        });
     }
 
     public override int SaveChanges()

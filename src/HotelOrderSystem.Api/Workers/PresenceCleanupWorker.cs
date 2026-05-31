@@ -24,15 +24,33 @@ public sealed class PresenceCleanupWorker : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            using var scope = _scopeFactory.CreateScope();
-            var presence = scope.ServiceProvider.GetRequiredService<IPresenceService>();
-            var count = await presence.CleanupOfflineUsersAsync(stoppingToken);
-            if (count > 0)
+            try
             {
-                _logger.LogInformation("Marked {Count} users offline.", count);
+                using var scope = _scopeFactory.CreateScope();
+                var presence = scope.ServiceProvider.GetRequiredService<IPresenceService>();
+                var count = await presence.CleanupOfflineUsersAsync(stoppingToken);
+                if (count > 0)
+                {
+                    _logger.LogInformation("Marked {Count} users offline.", count);
+                }
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Presence cleanup failed; will retry next interval.");
             }
 
-            await timer.WaitForNextTickAsync(stoppingToken);
+            try
+            {
+                await timer.WaitForNextTickAsync(stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
         }
     }
 }

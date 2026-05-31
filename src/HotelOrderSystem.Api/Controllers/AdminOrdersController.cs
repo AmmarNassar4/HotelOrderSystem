@@ -52,34 +52,6 @@ public sealed class AdminOrdersController : ControllerBase
             .Take(take)
             .ToListAsync(cancellationToken);
 
-        return Ok(ApiResponse<IReadOnlyList<OrderDto>>.Success(orders.Select(MapOrder).ToList()));
-    }
-
-    private static OrderDto MapOrder(Entities.Order order)
-    {
-        return new OrderDto(
-            order.OrderId,
-            order.RoomId,
-            order.Room.RoomNumber,
-            order.AssignedTeamId,
-            order.AssignedTeam?.Name,
-            order.Source,
-            order.Status,
-            order.CreatedByUserId,
-            order.CreatedByUser?.FullName,
-            order.AcceptedByUserId,
-            order.AcceptedByUser?.FullName,
-            order.CreatedAt,
-            order.AcceptedAt,
-            order.CompletedAt,
-            order.SlaDueAt,
-            order.EscalatedAt,
-            Convert.ToBase64String(order.RowVersion),
-            order.Details.Select(detail => new OrderDetailDto(
-                detail.OrderDetailId,
-                detail.ItemId,
-                detail.Item.Name,
-                detail.Quantity,
-                detail.DynamicAttributes)).ToList());
+        return Ok(ApiResponse<IReadOnlyList<OrderDto>>.Success(orders.Select(OrderMapper.MapToDto).ToList()));
     }
 }

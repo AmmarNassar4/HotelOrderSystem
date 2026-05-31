@@ -29,8 +29,27 @@ public sealed class SlaEscalationWorker : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            await EscalatePendingOrdersAsync(stoppingToken);
-            await timer.WaitForNextTickAsync(stoppingToken);
+            try
+            {
+                await EscalatePendingOrdersAsync(stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "SLA escalation scan failed; will retry next interval.");
+            }
+
+            try
+            {
+                await timer.WaitForNextTickAsync(stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
         }
     }
 
