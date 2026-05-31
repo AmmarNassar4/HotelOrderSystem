@@ -1,18 +1,20 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
 namespace HotelOrderSystem.Api.Dtos;
 
 public sealed record CreateOrderRequest(
-    int RoomId,
-    string Source,
-    List<CreateOrderLineRequest> Items);
+    [property: Range(1, int.MaxValue)] int RoomId,
+    [property: MaxLength(50)] string Source,
+    [property: Required, MinLength(1)] List<CreateOrderLineRequest> Items);
 
 public sealed record CreateOrderLineRequest(
-    int ItemId,
-    int Quantity,
+    [property: Range(1, int.MaxValue)] int ItemId,
+    [property: Range(1, int.MaxValue)] int Quantity,
     JsonElement? DynamicAttributes);
 
-public sealed record CreateGuestOrderRequest(List<CreateOrderLineRequest> Items);
+public sealed record CreateGuestOrderRequest(
+    [property: Required, MinLength(1)] List<CreateOrderLineRequest> Items);
 
 public sealed record AcceptOrderRequest(string? RowVersion);
 

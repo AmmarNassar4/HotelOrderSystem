@@ -1,9 +1,11 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace HotelOrderSystem.Api.Dtos;
 
 public sealed record HeartbeatRequest(
-    string DeviceId,
-    string AppState,
-    string? CurrentScreen);
+    [property: Required, MaxLength(200)] string DeviceId,
+    [property: MaxLength(50)] string AppState,
+    [property: MaxLength(100)] string? CurrentScreen);
 
 public sealed record HeartbeatResponse(
     DateTime ServerTimeUtc,

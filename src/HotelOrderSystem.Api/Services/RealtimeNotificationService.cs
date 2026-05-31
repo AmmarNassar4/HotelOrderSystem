@@ -55,6 +55,20 @@ public sealed class RealtimeNotificationService : IRealtimeNotificationService
         }
     }
 
+    public async Task NotifyOrderCancelledAsync(OrderDto order, CancellationToken cancellationToken = default)
+    {
+        await SendToAdminsAsync("OrderCancelled", order, cancellationToken);
+
+        if (order.AssignedTeamId.HasValue)
+        {
+            await SendToTeamAsync(order.AssignedTeamId.Value, "OrderCancelled", order, cancellationToken);
+        }
+        else
+        {
+            await SendToAllStaffAsync("OrderCancelled", order, cancellationToken);
+        }
+    }
+
     public async Task NotifyStaffPresenceChangedAsync(int userId, bool isOnline, CancellationToken cancellationToken = default)
     {
         await SendToAdminsAsync("StaffPresenceChanged", new { userId, isOnline }, cancellationToken);
