@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.ibaapps.HotelOrderSystem.push.HotelFirebaseMessagingService
+import com.ibaapps.HotelOrderSystem.push.parseOrderIdFromData
 import com.ibaapps.HotelOrderSystem.ui.navigation.AppNavHost
 import com.ibaapps.HotelOrderSystem.ui.theme.HotelStaffTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -46,7 +47,22 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleDeepLink(intent: Intent?) {
-        val orderId = intent?.getIntExtra(HotelFirebaseMessagingService.EXTRA_ORDER_ID, -1) ?: -1
-        if (orderId > 0) deepLinkOrderId = orderId
+        if (intent == null) return
+
+        // From our own foreground-built notification.
+        val direct = intent.getIntExtra(HotelFirebaseMessagingService.EXTRA_ORDER_ID, -1)
+        if (direct > 0) {
+            deepLinkOrderId = direct
+            return
+        }
+
+        // From a background system-tray notification: FCM delivers the data
+        // payload (type/payload) as string intent extras; orderId is nested in
+        // the payload JSON.
+        val data = buildMap {
+            intent.getStringExtra("orderId")?.let { put("orderId", it) }
+            intent.getStringExtra("payload")?.let { put("payload", it) }
+        }
+        parseOrderIdFromData(data)?.let { deepLinkOrderId = it }
     }
 }

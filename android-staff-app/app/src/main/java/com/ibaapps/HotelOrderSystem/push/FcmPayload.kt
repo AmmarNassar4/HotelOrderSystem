@@ -20,11 +20,18 @@ fun parseOrderIdFromData(data: Map<String, String>): Int? {
     }.getOrNull()
 }
 
-/** Maps a backend notification type to a user-facing title. */
-fun notificationTitleFor(type: String?): String = when (type) {
-    "OrderCreated" -> "New order"
-    "OrderClaimed", "OrderAccepted" -> "Order claimed"
-    "OrderCompleted" -> "Order completed"
-    "OrderCancelled" -> "Order cancelled"
-    else -> "Hotel order update"
-}
+/**
+ * Maps a backend notification type to a user-facing title. The backend sends
+ * UPPER_SNAKE types (see NotificationTypes: ORDER_CREATED, ORDER_ACCEPTED,
+ * ORDER_COMPLETED, ORDER_CLAIMED, SLA_ESCALATED); PascalCase is also accepted
+ * defensively.
+ */
+fun notificationTitleFor(type: String?): String =
+    when (type?.uppercase()?.replace("_", "")) {
+        "ORDERCREATED" -> "New order"
+        "ORDERCLAIMED", "ORDERACCEPTED" -> "Order claimed"
+        "ORDERCOMPLETED" -> "Order completed"
+        "ORDERCANCELLED" -> "Order cancelled"
+        "SLAESCALATED" -> "Order escalated"
+        else -> "Hotel order update"
+    }

@@ -25,10 +25,19 @@ class FcmPayloadTest {
     }
 
     @Test
-    fun titleMapsKnownTypes() {
-        assertEquals("New order", notificationTitleFor("OrderCreated"))
-        assertEquals("Order claimed", notificationTitleFor("OrderAccepted"))
-        assertEquals("Order completed", notificationTitleFor("OrderCompleted"))
+    fun titleMapsBackendUpperSnakeTypes() {
+        // Actual backend NotificationTypes are UPPER_SNAKE.
+        assertEquals("New order", notificationTitleFor("ORDER_CREATED"))
+        assertEquals("Order claimed", notificationTitleFor("ORDER_CLAIMED"))
+        assertEquals("Order claimed", notificationTitleFor("ORDER_ACCEPTED"))
+        assertEquals("Order completed", notificationTitleFor("ORDER_COMPLETED"))
+        assertEquals("Order escalated", notificationTitleFor("SLA_ESCALATED"))
         assertEquals("Hotel order update", notificationTitleFor(null))
+    }
+
+    @Test
+    fun titleAlsoAcceptsPascalCaseDefensively() {
+        assertEquals("New order", notificationTitleFor("OrderCreated"))
+        assertEquals("Order completed", notificationTitleFor("OrderCompleted"))
     }
 }
