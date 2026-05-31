@@ -27,6 +27,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.ibaapps.HotelOrderSystem.ui.orders.MyTasksScreen
 import com.ibaapps.HotelOrderSystem.ui.orders.PendingScreen
 import com.ibaapps.HotelOrderSystem.ui.status.StatusScreen
 
@@ -80,7 +81,7 @@ fun MainScaffold(
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(BottomTab.Pending.route) { PendingScreen(onOpenOrderDetails = onOpenOrderDetails) }
-            composable(BottomTab.MyTasks.route) { TabPlaceholder("My active tasks") }
+            composable(BottomTab.MyTasks.route) { MyTasksScreen(onOpenOrderDetails = onOpenOrderDetails) }
             composable(BottomTab.Status.route) { StatusScreen() }
             composable(BottomTab.Profile.route) { TabPlaceholder("Profile") }
         }
