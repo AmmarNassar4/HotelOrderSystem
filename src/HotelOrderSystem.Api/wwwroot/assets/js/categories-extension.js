@@ -200,7 +200,7 @@
       const filtered = catalog.items.filter(x => x.itemCategoryId === selectedCategory);
       itemSelect.disabled = filtered.length === 0;
       itemSelect.innerHTML = filtered.length
-        ? filtered.map(item => `<option value="${attr(item.itemId)}" data-name="${attr(item.name)}" data-props="${attr(item.baseProperties)}">${h(item.name)}${item.targetTeamName ? " - " + h(item.targetTeamName) : ""}</option>`).join("")
+        ? filtered.map(item => `<option value="${attr(item.itemId)}" data-name="${attr(item.name)}" data-props="${attr(item.baseProperties)}">${h(item.name)}</option>`).join("")
         : '<option value="">No active items in this category</option>';
       itemSelect.dispatchEvent(new Event("change", { bubbles: true }));
     }).catch(err => toast(err.message, "error"));
