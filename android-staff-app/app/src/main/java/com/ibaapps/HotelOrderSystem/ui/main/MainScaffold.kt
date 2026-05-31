@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -41,8 +42,10 @@ private enum class BottomTab(val route: String, val label: String, val icon: Ima
 @Composable
 fun MainScaffold(
     onOpenOrderDetails: (Int) -> Unit,
-    onLoggedOut: () -> Unit
+    onLoggedOut: () -> Unit,
+    mainViewModel: MainViewModel = hiltViewModel()
 ) {
+    // Obtaining the view model starts the heartbeat loop for the authenticated session.
     val tabNav = rememberNavController()
     val tabs = BottomTab.entries
 
