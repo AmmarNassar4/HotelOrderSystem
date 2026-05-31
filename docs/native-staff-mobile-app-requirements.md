@@ -255,6 +255,177 @@ UI requirements:
 - The current state should be visible at the top of the app.
 - If the API call fails, revert the toggle and show an error.
 
+### 6.3 Background Heartbeat Limitations and Native Android Requirements
+
+The mobile app should not copy the browser/PWA heartbeat behavior directly.
+
+In a web browser or PWA, it is not reliable to keep the app active in the background and send heartbeat requests continuously. Mobile operating systems and browsers may pause JavaScript timers, suspend background pages, throttle network activity, or stop the page completely when the screen is locked or the user switches to another app.
+
+For this reason, the production Android app should treat heartbeat differently from the web app.
+
+#### Web/PWA limitation
+
+The web/PWA version can send heartbeat only while the app is open and active in the foreground.
+
+The backend may mark a staff member as offline if no heartbeat is received within the configured timeout, for example 90 to 120 seconds.
+
+This is expected behavior and should not be treated as a bug in the web version.
+
+#### Native Android requirement
+
+The Android native app should provide a more reliable presence model than the browser version.
+
+The developer should implement one of the following approaches depending on the final business requirement.
+
+#### Option A: Foreground-only heartbeat
+
+This is the recommended default for version 1.
+
+The app sends heartbeat when:
+
+- The staff user is logged in.
+- The app is in the foreground.
+- The staff dashboard, pending tasks screen, or active tasks screen is open.
+- The app resumes from background.
+
+The app stops heartbeat when:
+
+- The user logs out.
+- The app goes to background.
+- The token expires.
+- The app is closed.
+
+When the app returns to foreground, it should immediately:
+
+1. Validate the stored session.
+2. Send heartbeat.
+3. Refresh pending orders.
+4. Refresh active tasks.
+5. Reconnect SignalR if needed.
+6. Re-register or verify the FCM token if needed.
+
+This approach is battery-friendly and acceptable if push notifications are used to alert staff while the app is not open.
+
+#### Option B: Foreground Service heartbeat
+
+Use this only if the hotel operation requires staff to remain actively online even when the app is not visible.
+
+On Android, a true continuous background heartbeat should be implemented using a Foreground Service.
+
+This service must show a persistent notification such as:
+
+```text
+Hotel Staff App is active
+Ready to receive hotel requests
+```
+
+The Foreground Service can send heartbeat at a controlled interval, for example every 60 seconds, while the staff member is marked as Ready.
+
+The service should stop when:
+
+- The staff user logs out.
+- The staff user switches to Not Ready.
+- The user explicitly stops active duty mode.
+- The app detects an invalid or expired token.
+
+Important notes:
+
+- Android may restrict background services depending on OS version, battery settings, and manufacturer-specific power management.
+- A Foreground Service is more reliable than normal background tasks, but it must be visible to the user through a persistent notification.
+- The app should not try to run silent continuous background work without user visibility.
+- The developer must follow Android background execution policies.
+
+#### Recommended business logic
+
+The system should separate these states:
+
+```text
+Ready = The staff member says they are available for work.
+Online = The system recently received heartbeat from the app.
+Reachable = The user has a valid active FCM token and can receive push notifications.
+```
+
+A staff member can be:
+
+```text
+Ready = true
+Online = false
+Reachable = true
+```
+
+This means the staff member is not actively using the app right now, but they may still receive push notifications.
+
+The backend and mobile app should not assume that Ready always means Online.
+
+#### Suggested task routing behavior
+
+For real-time task assignment, the system should prefer staff who are:
+
+```text
+Ready = true
+Online = true
+```
+
+For push notification alerts, the system may notify staff who are:
+
+```text
+Ready = true
+Reachable = true
+```
+
+If the business wants requests to be shown only to currently active staff, then the backend should require both Ready and Online.
+
+If the business wants staff to receive notifications even when the app is closed, then the backend should use FCM tokens for Ready staff even if they are currently Offline.
+
+#### Android implementation guidance
+
+The Android developer should implement:
+
+- App lifecycle detection.
+- Immediate heartbeat on app foreground.
+- Periodic heartbeat while foregrounded.
+- SignalR reconnect on app resume.
+- FCM token registration after login and token refresh.
+- Clear handling of Ready, Online, and Push Reachable states.
+- Optional Foreground Service only if continuous active duty mode is required.
+
+The app should avoid aggressive background polling unless explicitly required.
+
+#### Expected behavior
+
+When the app is open:
+
+- Heartbeat is sent periodically.
+- SignalR remains connected.
+- Staff appears Online.
+- Staff can accept and complete tasks.
+
+When the app is closed or backgrounded without Foreground Service:
+
+- Heartbeat may stop.
+- SignalR may disconnect.
+- Staff may become Offline after the backend timeout.
+- Staff can still receive FCM push notifications if the token is valid.
+
+When the app is running in Foreground Service mode:
+
+- A persistent Android notification is shown.
+- Heartbeat may continue while the staff member is Ready.
+- The user can stop active duty mode.
+- The app must respect battery and Android background restrictions.
+
+#### Acceptance criteria for Android heartbeat behavior
+
+The Android app is acceptable when:
+
+- It sends heartbeat immediately after login.
+- It sends heartbeat when returning from background.
+- It stops heartbeat after logout.
+- It does not falsely show the staff as Online when heartbeat has stopped.
+- It clearly displays Ready and Online as separate states.
+- It receives push notifications even when not currently Online, if the user has a valid FCM token.
+- If Foreground Service mode is implemented, it shows a persistent notification and stops correctly when the user is Not Ready or logged out.
+
 ---
 
 ## 7. Order and Task Management
@@ -567,7 +738,7 @@ Recommended behavior:
 
 When the app is backgrounded:
 
-- Stop unnecessary polling.
+- Stop unnecessary polling unless Foreground Service active-duty mode is explicitly enabled.
 - Keep push notifications enabled.
 - Do not keep aggressive background heartbeat unless specifically required.
 - On resume, immediately:
@@ -710,7 +881,7 @@ The app is considered ready when:
 - Staff can log in successfully.
 - Staff can register FCM token.
 - Staff can toggle Ready/Not Ready.
-- Heartbeat is sent successfully.
+- Heartbeat is sent successfully while the app is foregrounded, or through Foreground Service mode if that option is implemented.
 - Pending team orders appear.
 - Staff can accept an order.
 - Accepted orders appear under My Tasks.
@@ -722,6 +893,7 @@ The app is considered ready when:
 - No duplicate notifications appear on the same device.
 - The app remains usable with weak network conditions.
 - The UI is clearly mobile-first.
+- Ready, Online, and Push Reachable states are displayed and handled separately.
 
 ---
 
