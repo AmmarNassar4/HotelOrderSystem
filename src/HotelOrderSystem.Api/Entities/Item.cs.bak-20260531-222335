@@ -10,7 +10,6 @@ public sealed class Item : ISoftDelete
     public int? TargetTeamId { get; set; }
     public Team? TargetTeam { get; set; }
     public string BaseProperties { get; set; } = "{\"fields\":[]}";
-    public bool StaffOnly { get; set; }
     public bool IsActive { get; set; } = true;
     public bool IsDeleted { get; set; }
 

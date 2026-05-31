@@ -67,8 +67,7 @@ public sealed class CatalogService : ICatalogService
                 x.BaseProperties,
                 x.IsActive,
                 x.ItemCategoryId,
-                x.Category != null ? x.Category.Name : null,
-                x.StaffOnly))
+                x.Category != null ? x.Category.Name : null))
             .ToListAsync(cancellationToken);
 
         _cache.Set(ItemsCacheKey, items, TimeSpan.FromMinutes(5));

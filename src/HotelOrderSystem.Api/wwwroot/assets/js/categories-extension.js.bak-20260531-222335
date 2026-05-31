@@ -128,8 +128,7 @@
         targetTeamName: x.targetTeamName || "",
         baseProperties: x.baseProperties || '{"fields":[]}',
         itemCategoryId: String(x.itemCategoryId || ""),
-        itemCategoryName: x.itemCategoryName || "Uncategorized",
-        staffOnly: Boolean(x.staffOnly)
+        itemCategoryName: x.itemCategoryName || "Uncategorized"
       }));
   }
 

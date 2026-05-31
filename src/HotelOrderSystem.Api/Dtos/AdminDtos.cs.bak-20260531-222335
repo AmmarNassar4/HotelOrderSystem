@@ -15,7 +15,6 @@ public sealed record CreateItemRequest(
     int ItemCategoryId,
     int? TargetTeamId,
     string? BaseProperties,
-    bool StaffOnly = false,
     bool IsActive = true);
 
 public sealed record UpdateItemRequest(
@@ -24,7 +23,6 @@ public sealed record UpdateItemRequest(
     int ItemCategoryId,
     int? TargetTeamId,
     string? BaseProperties,
-    bool StaffOnly = false,
     bool IsActive = true);
 
 public sealed record CreateUserRequest(

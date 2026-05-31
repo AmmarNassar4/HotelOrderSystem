@@ -26,8 +26,7 @@ public sealed record ItemDto(
     string BaseProperties,
     bool IsActive,
     int? ItemCategoryId = null,
-    string? ItemCategoryName = null,
-    bool StaffOnly = false);
+    string? ItemCategoryName = null);
 
 public sealed record GuestCatalogDto(
     RoomDto Room,

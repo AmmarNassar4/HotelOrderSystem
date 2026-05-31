@@ -1051,14 +1051,6 @@
             </select>
           </div>
           <div class="field">
-            <label>Guest visibility</label>
-            <label class="check-field">
-              <input name="staffOnly" type="checkbox" ${editing?.staffOnly ? "checked" : ""} />
-              Staff only - hide from guest QR menu
-            </label>
-            <small class="visibility-note">Use this for internal staff-only products or services.</small>
-          </div>
-          <div class="field">
             <label>Status</label>
             <select name="isActive">
               ${option("true", "Active", String(editing?.isActive ?? true))}
@@ -1075,7 +1067,6 @@
       <tr>
         <td><strong>${html(i.name)}</strong><br><small>${html(i.type)}</small></td>
         <td>${html(i.targetTeamName || "All teams")}</td>
-        <td>${i.staffOnly ? `<span class="pill warning">Staff only</span>` : `<span class="pill success">Guest visible</span>`}</td>
         <td>${i.isActive ? `<span class="pill success">Active</span>` : `<span class="pill danger">Inactive</span>`}</td>
         <td>${html(schemaSummary(i.baseProperties))}</td>
         <td>
@@ -1098,7 +1089,7 @@
             </div>
             <span class="pill primary">${items.length} items</span>
           </div>
-          <div class="table-wrap"><table><thead><tr><th>Item</th><th>Team</th><th>Visibility</th><th>Status</th><th>Dynamic fields</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th>Item</th><th>Team</th><th>Status</th><th>Dynamic fields</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></div>
         </section>
       </div>
     `));
@@ -1322,7 +1313,18 @@
                 ${linePicker(catalog.items, "guest")}
                 <button class="btn btn-soft" type="submit">Add to request</button>
               </form>
-              ${renderGuestMenuTree(catalog.items)}
+              <div class="guest-menu" style="margin-top:16px">
+                ${catalog.items.map(item => `
+                  <div class="guest-item">
+                    <h3>${html(item.name)}</h3>
+                    <div class="order-meta">
+                      <span class="pill">${html(item.type === "Service" ? "Service" : "Product")}</span>
+                      ${item.targetTeamName ? `<span class="pill info">${html(item.targetTeamName)}</span>` : ""}
+                    </div>
+                    <small class="footer-note">${html(schemaSummary(item.baseProperties))}</small>
+                  </div>
+                `).join("")}
+              </div>
             </section>
             <aside class="card guest-sticky">
               <div class="card-header">
@@ -1346,41 +1348,6 @@
     }
   }
 
-  function renderGuestMenuTree(items) {
-    if (!items?.length) return emptyBlock("No guest services are currently available.");
-
-    const groups = new Map();
-    items.forEach(item => {
-      const category = item.itemCategoryName || "Other services";
-      if (!groups.has(category)) groups.set(category, []);
-      groups.get(category).push(item);
-    });
-
-    return `
-      <div class="guest-menu guest-category-tree" style="margin-top:16px">
-        ${Array.from(groups.entries()).map(([category, list], index) => `
-          <details class="guest-category" ${index === 0 ? "open" : ""}>
-            <summary>
-              <span>${html(category)}</span>
-              <span class="pill">${list.length}</span>
-            </summary>
-            <div class="guest-category-items">
-              ${list.map(item => `
-                <div class="guest-item">
-                  <h3>${html(item.name)}</h3>
-                  <div class="order-meta">
-                    <span class="pill">${html(item.type === "Service" ? "Service" : "Product")}</span>
-                  </div>
-                  <small class="footer-note">${html(schemaSummary(item.baseProperties))}</small>
-                </div>
-              `).join("")}
-            </div>
-          </details>
-        `).join("")}
-      </div>
-    `;
-  }
-
   function guestShell(title, body) {
     return `
       <div class="guest-page">
@@ -1395,7 +1362,8 @@
             </div>
             <h1>${html(title)}</h1>
             <p>Choose what you need from the hotel services. The request will be routed automatically to the right team.</p>
-          </div>         
+          </div>
+          <p class="footer-note">This guest QR page is designed for guests and does not expose internal hotel data.</p>
         </section>
         ${body}
       </div>
@@ -1411,7 +1379,7 @@
         <div class="field">
           <label>Item / service</label>
           <select name="itemId" id="${prefix}-line-item" required>
-            ${items.map(item => `<option value="${item.itemId}" data-name="${attr(item.name)}" data-props="${attr(item.baseProperties)}">${html(item.name)}</option>`).join("")}
+            ${items.map(item => `<option value="${item.itemId}" data-name="${attr(item.name)}" data-props="${attr(item.baseProperties)}">${html(item.name)}${item.targetTeamName ? " - " + html(item.targetTeamName) : ""}</option>`).join("")}
           </select>
         </div>
         <div class="field">
@@ -2003,7 +1971,6 @@
           itemCategoryId: data.itemCategoryId ? Number(data.itemCategoryId) : 0,
           targetTeamId: data.targetTeamId ? Number(data.targetTeamId) : null,
           baseProperties,
-          staffOnly: data.staffOnly === "on",
           isActive: data.isActive === "true"
         };
       }

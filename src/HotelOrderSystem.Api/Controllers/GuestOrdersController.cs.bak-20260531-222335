@@ -39,7 +39,7 @@ public sealed class GuestOrdersController : ControllerBase
         var items = await _catalog.GetItemsAsync(cancellationToken);
         var response = new GuestCatalogDto(
             new RoomDto(room.RoomId, room.RoomNumber, room.DirectLinkPayload, room.IsActive),
-            items.Where(x => x.IsActive && !x.StaffOnly).ToList());
+            items.Where(x => x.IsActive).ToList());
 
         return Ok(ApiResponse<GuestCatalogDto>.Success(response));
     }

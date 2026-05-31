@@ -85,7 +85,6 @@ public sealed class AppDbContext : DbContext
                 .HasForeignKey(x => x.ItemCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.Property(x => x.BaseProperties).HasColumnType("nvarchar(max)").IsRequired();
-            entity.Property(x => x.StaffOnly).HasDefaultValue(false);
             entity.HasOne(x => x.TargetTeam)
                 .WithMany(x => x.Items)
                 .HasForeignKey(x => x.TargetTeamId)
