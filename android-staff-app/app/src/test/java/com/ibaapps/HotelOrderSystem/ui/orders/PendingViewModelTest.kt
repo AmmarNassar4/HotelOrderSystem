@@ -5,6 +5,7 @@ import com.ibaapps.HotelOrderSystem.data.remote.NetworkResult
 import com.ibaapps.HotelOrderSystem.domain.model.Order
 import com.ibaapps.HotelOrderSystem.domain.model.OrderStatus
 import com.ibaapps.HotelOrderSystem.domain.repository.OrderRepository
+import com.ibaapps.HotelOrderSystem.util.FakeRealtimeService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -59,7 +60,7 @@ class PendingViewModelTest {
     @Test
     fun init_loadsPendingOrders() = runTest {
         repo.pending = listOf(order(1), order(2))
-        val vm = PendingViewModel(repo)
+        val vm = PendingViewModel(repo, FakeRealtimeService())
         assertEquals(2, vm.state.value.orders.size)
         assertTrue(vm.state.value.loadedOnce)
     }
@@ -67,7 +68,7 @@ class PendingViewModelTest {
     @Test
     fun accept_success_removesOrderFromList() = runTest {
         repo.pending = listOf(order(1), order(2))
-        val vm = PendingViewModel(repo)
+        val vm = PendingViewModel(repo, FakeRealtimeService())
         repo.acceptResult = NetworkResult.Success(order(1).copy(status = OrderStatus.Accepted))
 
         vm.accept(order(1))
@@ -81,7 +82,7 @@ class PendingViewModelTest {
     @Test
     fun accept_conflict_showsMessageAndRefreshes() = runTest {
         repo.pending = listOf(order(1), order(2))
-        val vm = PendingViewModel(repo)
+        val vm = PendingViewModel(repo, FakeRealtimeService())
         val callsAfterInit = repo.pendingCalls
         repo.acceptResult = NetworkResult.Error(ApiErrorType.Conflict, "taken")
 

@@ -3,6 +3,7 @@ package com.ibaapps.HotelOrderSystem.ui.main
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
@@ -14,19 +15,23 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.ibaapps.HotelOrderSystem.domain.realtime.RealtimeConnectionState
 import com.ibaapps.HotelOrderSystem.ui.orders.MyTasksScreen
 import com.ibaapps.HotelOrderSystem.ui.orders.PendingScreen
 import com.ibaapps.HotelOrderSystem.ui.status.StatusScreen
@@ -85,16 +90,35 @@ fun MainScaffold(
             }
         }
     ) { innerPadding ->
-        NavHost(
-            navController = tabNav,
-            startDestination = BottomTab.Pending.route,
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable(BottomTab.Pending.route) { PendingScreen(onOpenOrderDetails = onOpenOrderDetails) }
-            composable(BottomTab.MyTasks.route) { MyTasksScreen(onOpenOrderDetails = onOpenOrderDetails) }
-            composable(BottomTab.Status.route) { StatusScreen() }
-            composable(BottomTab.Profile.route) { TabPlaceholder("Profile") }
+        Column(modifier = Modifier.padding(innerPadding)) {
+            val connectionState by mainViewModel.connectionState.collectAsStateWithLifecycle()
+            if (connectionState != RealtimeConnectionState.Connected) {
+                ReconnectingBanner()
+            }
+            NavHost(
+                navController = tabNav,
+                startDestination = BottomTab.Pending.route
+            ) {
+                composable(BottomTab.Pending.route) { PendingScreen(onOpenOrderDetails = onOpenOrderDetails) }
+                composable(BottomTab.MyTasks.route) { MyTasksScreen(onOpenOrderDetails = onOpenOrderDetails) }
+                composable(BottomTab.Status.route) { StatusScreen() }
+                composable(BottomTab.Profile.route) { TabPlaceholder("Profile") }
+            }
         }
+    }
+}
+
+@Composable
+private fun ReconnectingBanner() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.secondaryContainer
+    ) {
+        Text(
+            text = "Reconnecting…",
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+        )
     }
 }
 

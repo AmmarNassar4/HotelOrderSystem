@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.ibaapps.HotelOrderSystem.data.remote.ApiErrorType
 import com.ibaapps.HotelOrderSystem.data.remote.NetworkResult
 import com.ibaapps.HotelOrderSystem.domain.model.Order
+import com.ibaapps.HotelOrderSystem.domain.realtime.RealtimeEvent
+import com.ibaapps.HotelOrderSystem.domain.realtime.RealtimeService
 import com.ibaapps.HotelOrderSystem.domain.repository.OrderRepository
 import com.ibaapps.HotelOrderSystem.ui.common.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,7 +29,8 @@ data class PendingUiState(
 
 @HiltViewModel
 class PendingViewModel @Inject constructor(
-    private val orderRepository: OrderRepository
+    private val orderRepository: OrderRepository,
+    realtimeService: RealtimeService
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(PendingUiState())
@@ -35,6 +38,15 @@ class PendingViewModel @Inject constructor(
 
     init {
         load()
+        // Live updates: a new order appears, or one is accepted by another
+        // staff member (which removes it from the team's pending list).
+        viewModelScope.launch {
+            realtimeService.events.collect { event ->
+                when (event.type) {
+                    RealtimeEvent.ORDER_CREATED, RealtimeEvent.ORDER_ACCEPTED -> fetch()
+                }
+            }
+        }
     }
 
     fun load() {

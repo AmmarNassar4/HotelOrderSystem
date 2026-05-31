@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ibaapps.HotelOrderSystem.data.remote.NetworkResult
 import com.ibaapps.HotelOrderSystem.domain.model.Order
+import com.ibaapps.HotelOrderSystem.domain.realtime.RealtimeEvent
+import com.ibaapps.HotelOrderSystem.domain.realtime.RealtimeService
 import com.ibaapps.HotelOrderSystem.domain.repository.OrderRepository
 import com.ibaapps.HotelOrderSystem.ui.common.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,7 +28,8 @@ data class MyTasksUiState(
 
 @HiltViewModel
 class MyTasksViewModel @Inject constructor(
-    private val orderRepository: OrderRepository
+    private val orderRepository: OrderRepository,
+    realtimeService: RealtimeService
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(MyTasksUiState())
@@ -34,6 +37,14 @@ class MyTasksViewModel @Inject constructor(
 
     init {
         load()
+        // Live updates: my active list changes when orders are accepted or completed.
+        viewModelScope.launch {
+            realtimeService.events.collect { event ->
+                when (event.type) {
+                    RealtimeEvent.ORDER_ACCEPTED, RealtimeEvent.ORDER_COMPLETED -> fetch()
+                }
+            }
+        }
     }
 
     fun load() {

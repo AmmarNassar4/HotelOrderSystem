@@ -5,6 +5,7 @@ import com.ibaapps.HotelOrderSystem.data.remote.NetworkResult
 import com.ibaapps.HotelOrderSystem.domain.model.Order
 import com.ibaapps.HotelOrderSystem.domain.model.OrderStatus
 import com.ibaapps.HotelOrderSystem.domain.repository.OrderRepository
+import com.ibaapps.HotelOrderSystem.util.FakeRealtimeService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -58,14 +59,14 @@ class MyTasksViewModelTest {
     @Test
     fun init_loadsActiveOrders() = runTest {
         repo.active = listOf(order(1), order(2))
-        val vm = MyTasksViewModel(repo)
+        val vm = MyTasksViewModel(repo, FakeRealtimeService())
         assertEquals(2, vm.state.value.orders.size)
     }
 
     @Test
     fun complete_success_removesOrderAndPassesNote() = runTest {
         repo.active = listOf(order(1))
-        val vm = MyTasksViewModel(repo)
+        val vm = MyTasksViewModel(repo, FakeRealtimeService())
         repo.completeResult = NetworkResult.Success(order(1).copy(status = OrderStatus.Completed))
 
         vm.complete(1, "done")
@@ -78,7 +79,7 @@ class MyTasksViewModelTest {
     @Test
     fun complete_blankNote_sentAsNull() = runTest {
         repo.active = listOf(order(1))
-        val vm = MyTasksViewModel(repo)
+        val vm = MyTasksViewModel(repo, FakeRealtimeService())
         repo.completeResult = NetworkResult.Success(order(1))
         vm.complete(1, "   ")
         assertEquals(null, repo.lastNotes)
