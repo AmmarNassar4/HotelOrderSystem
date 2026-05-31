@@ -46,11 +46,21 @@ private enum class BottomTab(val route: String, val label: String, val icon: Ima
 fun MainScaffold(
     onOpenOrderDetails: (Int) -> Unit,
     onLoggedOut: () -> Unit,
+    deepLinkOrderId: Int? = null,
+    onDeepLinkConsumed: () -> Unit = {},
     mainViewModel: MainViewModel = hiltViewModel()
 ) {
     // Obtaining the view model starts the heartbeat loop for the authenticated session.
     val tabNav = rememberNavController()
     val tabs = BottomTab.entries
+
+    // A notification deep link opens the relevant order's details once authenticated.
+    androidx.compose.runtime.LaunchedEffect(deepLinkOrderId) {
+        deepLinkOrderId?.let {
+            onOpenOrderDetails(it)
+            onDeepLinkConsumed()
+        }
+    }
 
     Scaffold(
         bottomBar = {

@@ -14,7 +14,11 @@ import com.ibaapps.HotelOrderSystem.ui.orders.OrderDetailsScreen
 import com.ibaapps.HotelOrderSystem.ui.splash.SplashScreen
 
 @Composable
-fun AppNavHost(navController: NavHostController = rememberNavController()) {
+fun AppNavHost(
+    deepLinkOrderId: Int? = null,
+    onDeepLinkConsumed: () -> Unit = {},
+    navController: NavHostController = rememberNavController()
+) {
     NavHost(navController = navController, startDestination = Routes.SPLASH) {
 
         composable(Routes.SPLASH) {
@@ -60,7 +64,9 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                     navController.navigate(Routes.LOGIN) {
                         popUpTo(Routes.MAIN) { inclusive = true }
                     }
-                }
+                },
+                deepLinkOrderId = deepLinkOrderId,
+                onDeepLinkConsumed = onDeepLinkConsumed
             )
         }
 
