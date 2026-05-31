@@ -34,6 +34,7 @@ import androidx.navigation.compose.rememberNavController
 import com.ibaapps.HotelOrderSystem.domain.realtime.RealtimeConnectionState
 import com.ibaapps.HotelOrderSystem.ui.orders.MyTasksScreen
 import com.ibaapps.HotelOrderSystem.ui.orders.PendingScreen
+import com.ibaapps.HotelOrderSystem.ui.profile.ProfileScreen
 import com.ibaapps.HotelOrderSystem.ui.status.StatusScreen
 
 private enum class BottomTab(val route: String, val label: String, val icon: ImageVector) {
@@ -102,7 +103,7 @@ fun MainScaffold(
                 composable(BottomTab.Pending.route) { PendingScreen(onOpenOrderDetails = onOpenOrderDetails) }
                 composable(BottomTab.MyTasks.route) { MyTasksScreen(onOpenOrderDetails = onOpenOrderDetails) }
                 composable(BottomTab.Status.route) { StatusScreen() }
-                composable(BottomTab.Profile.route) { TabPlaceholder("Profile") }
+                composable(BottomTab.Profile.route) { ProfileScreen(onLoggedOut = onLoggedOut) }
             }
         }
     }
@@ -122,13 +123,3 @@ private fun ReconnectingBanner() {
     }
 }
 
-@Composable
-private fun TabPlaceholder(title: String) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = title, style = MaterialTheme.typography.titleMedium)
-    }
-}
