@@ -3,6 +3,7 @@ package com.ibaapps.HotelOrderSystem.di
 import com.ibaapps.HotelOrderSystem.BuildConfig
 import com.ibaapps.HotelOrderSystem.data.remote.AuthInterceptor
 import com.ibaapps.HotelOrderSystem.data.remote.StaffApiService
+import com.ibaapps.HotelOrderSystem.data.remote.UnauthorizedInterceptor
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -42,9 +43,11 @@ object NetworkModule {
     @Singleton
     fun provideOkHttpClient(
         authInterceptor: AuthInterceptor,
+        unauthorizedInterceptor: UnauthorizedInterceptor,
         loggingInterceptor: HttpLoggingInterceptor
     ): OkHttpClient = OkHttpClient.Builder()
         .addInterceptor(authInterceptor)
+        .addInterceptor(unauthorizedInterceptor)
         .addInterceptor(loggingInterceptor)
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)

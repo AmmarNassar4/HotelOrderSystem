@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.ibaapps.HotelOrderSystem.ui.common.toClockTimeOrDash
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,6 +65,15 @@ fun PendingScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    state.lastUpdatedAt?.let { updated ->
+                        item {
+                            Text(
+                                text = "Last updated ${updated.toClockTimeOrDash()}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
                     items(state.orders, key = { it.orderId }) { order ->
                         OrderCard(
                             order = order,
@@ -71,7 +81,7 @@ fun PendingScreen(
                         ) {
                             Button(
                                 onClick = { viewModel.accept(order) },
-                                enabled = order.orderId !in state.acceptingIds
+                                enabled = order.orderId !in state.acceptingIds && state.isOnline
                             ) {
                                 Text("Accept")
                             }

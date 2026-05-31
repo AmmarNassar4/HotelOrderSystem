@@ -68,6 +68,12 @@ fun MainScaffold(
         }
     }
 
+    // Forced logout (e.g. session expired / 401) returns to login.
+    val forceLoggedOut by mainViewModel.forceLoggedOut.collectAsStateWithLifecycle()
+    androidx.compose.runtime.LaunchedEffect(forceLoggedOut) {
+        if (forceLoggedOut) onLoggedOut()
+    }
+
     Scaffold(
         bottomBar = {
             NavigationBar {
@@ -92,9 +98,12 @@ fun MainScaffold(
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
+            val isOnline by mainViewModel.isOnline.collectAsStateWithLifecycle()
             val connectionState by mainViewModel.connectionState.collectAsStateWithLifecycle()
-            if (connectionState != RealtimeConnectionState.Connected) {
-                ReconnectingBanner()
+            if (!isOnline) {
+                Banner("No internet connection", MaterialTheme.colorScheme.errorContainer)
+            } else if (connectionState != RealtimeConnectionState.Connected) {
+                Banner("Reconnecting…", MaterialTheme.colorScheme.secondaryContainer)
             }
             NavHost(
                 navController = tabNav,
@@ -110,13 +119,10 @@ fun MainScaffold(
 }
 
 @Composable
-private fun ReconnectingBanner() {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.secondaryContainer
-    ) {
+private fun Banner(text: String, color: androidx.compose.ui.graphics.Color) {
+    Surface(modifier = Modifier.fillMaxWidth(), color = color) {
         Text(
-            text = "Reconnecting…",
+            text = text,
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
         )

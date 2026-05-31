@@ -8,6 +8,7 @@ import com.ibaapps.HotelOrderSystem.domain.model.Order
 import com.ibaapps.HotelOrderSystem.domain.realtime.RealtimeEvent
 import com.ibaapps.HotelOrderSystem.domain.realtime.RealtimeService
 import com.ibaapps.HotelOrderSystem.domain.repository.OrderRepository
+import com.ibaapps.HotelOrderSystem.monitor.NetworkMonitor
 import com.ibaapps.HotelOrderSystem.ui.common.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
 import javax.inject.Inject
 
 data class PendingUiState(
@@ -24,13 +26,16 @@ data class PendingUiState(
     val acceptingIds: Set<Int> = emptySet(),
     val errorMessage: String? = null,
     val transientMessage: String? = null,
-    val loadedOnce: Boolean = false
+    val loadedOnce: Boolean = false,
+    val isOnline: Boolean = true,
+    val lastUpdatedAt: Instant? = null
 )
 
 @HiltViewModel
 class PendingViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
-    realtimeService: RealtimeService
+    realtimeService: RealtimeService,
+    networkMonitor: NetworkMonitor
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(PendingUiState())
@@ -46,6 +51,9 @@ class PendingViewModel @Inject constructor(
                     RealtimeEvent.ORDER_CREATED, RealtimeEvent.ORDER_ACCEPTED -> fetch()
                 }
             }
+        }
+        viewModelScope.launch {
+            networkMonitor.isOnline.collect { online -> _state.update { it.copy(isOnline = online) } }
         }
     }
 
@@ -68,7 +76,8 @@ class PendingViewModel @Inject constructor(
                         isLoading = false,
                         isRefreshing = false,
                         loadedOnce = true,
-                        errorMessage = null
+                        errorMessage = null,
+                        lastUpdatedAt = Instant.now()
                     )
                 }
                 is NetworkResult.Error -> _state.update {

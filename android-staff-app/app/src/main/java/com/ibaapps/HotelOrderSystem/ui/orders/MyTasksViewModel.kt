@@ -7,6 +7,7 @@ import com.ibaapps.HotelOrderSystem.domain.model.Order
 import com.ibaapps.HotelOrderSystem.domain.realtime.RealtimeEvent
 import com.ibaapps.HotelOrderSystem.domain.realtime.RealtimeService
 import com.ibaapps.HotelOrderSystem.domain.repository.OrderRepository
+import com.ibaapps.HotelOrderSystem.monitor.NetworkMonitor
 import com.ibaapps.HotelOrderSystem.ui.common.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
 import javax.inject.Inject
 
 data class MyTasksUiState(
@@ -23,13 +25,16 @@ data class MyTasksUiState(
     val completingIds: Set<Int> = emptySet(),
     val errorMessage: String? = null,
     val transientMessage: String? = null,
-    val loadedOnce: Boolean = false
+    val loadedOnce: Boolean = false,
+    val isOnline: Boolean = true,
+    val lastUpdatedAt: Instant? = null
 )
 
 @HiltViewModel
 class MyTasksViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
-    realtimeService: RealtimeService
+    realtimeService: RealtimeService,
+    networkMonitor: NetworkMonitor
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(MyTasksUiState())
@@ -44,6 +49,9 @@ class MyTasksViewModel @Inject constructor(
                     RealtimeEvent.ORDER_ACCEPTED, RealtimeEvent.ORDER_COMPLETED -> fetch()
                 }
             }
+        }
+        viewModelScope.launch {
+            networkMonitor.isOnline.collect { online -> _state.update { it.copy(isOnline = online) } }
         }
     }
 
@@ -61,7 +69,7 @@ class MyTasksViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = orderRepository.getMyActive()) {
                 is NetworkResult.Success -> _state.update {
-                    it.copy(orders = result.data, isLoading = false, isRefreshing = false, loadedOnce = true, errorMessage = null)
+                    it.copy(orders = result.data, isLoading = false, isRefreshing = false, loadedOnce = true, errorMessage = null, lastUpdatedAt = Instant.now())
                 }
                 is NetworkResult.Error -> _state.update {
                     it.copy(isLoading = false, isRefreshing = false, loadedOnce = true, errorMessage = result.toUserMessage())

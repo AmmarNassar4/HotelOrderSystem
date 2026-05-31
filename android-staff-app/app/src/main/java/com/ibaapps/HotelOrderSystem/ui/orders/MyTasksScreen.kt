@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ibaapps.HotelOrderSystem.domain.model.Order
+import com.ibaapps.HotelOrderSystem.ui.common.toClockTimeOrDash
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,12 +72,21 @@ fun MyTasksScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    state.lastUpdatedAt?.let { updated ->
+                        item {
+                            Text(
+                                text = "Last updated ${updated.toClockTimeOrDash()}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
                     items(state.orders, key = { it.orderId }) { order ->
                         OrderCard(order = order, onClick = { onOpenOrderDetails(order.orderId) }) {
                             OutlinedButton(onClick = { onOpenOrderDetails(order.orderId) }) { Text("Details") }
                             Button(
                                 onClick = { orderToComplete = order },
-                                enabled = order.orderId !in state.completingIds,
+                                enabled = order.orderId !in state.completingIds && state.isOnline,
                                 modifier = Modifier.padding(start = 8.dp)
                             ) { Text("Complete") }
                         }
