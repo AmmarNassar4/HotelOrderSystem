@@ -19,8 +19,7 @@ android {
         versionCode = 1
         versionName = "1.0.0"
 
-        buildConfigField("String", "WEB_APP_URL", "\"https://example.com/#/staff\"")
-        buildConfigField("String", "API_BASE_URL", "\"https://example.com\"")
+        buildConfigField("String", "API_BASE_URL", "\"https://hos.ibaapps.work\"")
         buildConfigField("String", "SIGNALR_STAFF_HUB", "\"/hubs/staff\"")
         buildConfigField("String", "PLATFORM", "\"Android\"")
     }
@@ -50,7 +49,7 @@ android {
     buildTypes {
         debug {
             versionNameSuffix = "-debug"
-            buildConfigField("String", "WEB_APP_URL", "\"https://10.0.2.2:5001/#/staff\"")
+            // Emulator host; release stays on the production HTTPS endpoint.
             buildConfigField("String", "API_BASE_URL", "\"https://10.0.2.2:5001\"")
         }
         release {
