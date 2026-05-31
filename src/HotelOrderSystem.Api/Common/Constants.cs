@@ -41,6 +41,7 @@ public static class NotificationTypes
     public const string OrderCreated = "ORDER_CREATED";
     public const string OrderAccepted = "ORDER_ACCEPTED";
     public const string OrderCompleted = "ORDER_COMPLETED";
+    public const string OrderCancelled = "ORDER_CANCELLED";
     public const string OrderClaimed = "ORDER_CLAIMED";
     public const string SlaEscalated = "SLA_ESCALATED";
 }

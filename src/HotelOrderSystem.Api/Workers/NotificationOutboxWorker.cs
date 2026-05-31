@@ -75,7 +75,7 @@ public sealed class NotificationOutboxWorker : BackgroundService
                 {
                     await push.SendToTeamAsync(notification.TargetTeamId.Value, notification.Type, notification.PayloadJson, cancellationToken);
                 }
-                else if (notification.Type == NotificationTypes.OrderCreated || notification.Type == NotificationTypes.OrderClaimed)
+                else if (notification.Type is NotificationTypes.OrderCreated or NotificationTypes.OrderClaimed or NotificationTypes.OrderCancelled)
                 {
                     await push.SendBroadcastAsync(notification.Type, notification.PayloadJson, cancellationToken);
                 }

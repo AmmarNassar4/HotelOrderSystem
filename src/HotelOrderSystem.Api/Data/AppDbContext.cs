@@ -30,7 +30,7 @@ public sealed class AppDbContext : DbContext
             entity.ToTable("Teams");
             entity.HasKey(x => x.TeamId);
             entity.Property(x => x.Name).HasMaxLength(150).IsRequired();
-            entity.HasIndex(x => x.Name).IsUnique();
+            entity.HasIndex(x => x.Name).IsUnique().HasFilter("[IsDeleted] = 0");
             entity.HasQueryFilter(x => !x.IsDeleted);
         });
 
@@ -42,7 +42,7 @@ public sealed class AppDbContext : DbContext
             entity.Property(x => x.UserName).HasMaxLength(80).IsRequired();
             entity.Property(x => x.PasswordHash).HasMaxLength(500).IsRequired();
             entity.Property(x => x.Role).HasMaxLength(50).IsRequired();
-            entity.HasIndex(x => x.UserName).IsUnique();
+            entity.HasIndex(x => x.UserName).IsUnique().HasFilter("[IsDeleted] = 0");
             entity.HasOne(x => x.Team)
                 .WithMany(x => x.Users)
                 .HasForeignKey(x => x.TeamId)
@@ -56,8 +56,8 @@ public sealed class AppDbContext : DbContext
             entity.HasKey(x => x.RoomId);
             entity.Property(x => x.RoomNumber).HasMaxLength(50).IsRequired();
             entity.Property(x => x.DirectLinkPayload).HasMaxLength(250).IsRequired();
-            entity.HasIndex(x => x.RoomNumber).IsUnique();
-            entity.HasIndex(x => x.DirectLinkPayload).IsUnique();
+            entity.HasIndex(x => x.RoomNumber).IsUnique().HasFilter("[IsDeleted] = 0");
+            entity.HasIndex(x => x.DirectLinkPayload).IsUnique().HasFilter("[IsDeleted] = 0");
             entity.HasQueryFilter(x => !x.IsDeleted);
         });
 
@@ -67,7 +67,7 @@ public sealed class AppDbContext : DbContext
             entity.HasKey(x => x.ItemCategoryId);
             entity.Property(x => x.Name).HasMaxLength(150).IsRequired();
             entity.Property(x => x.Description).HasMaxLength(500);
-            entity.HasIndex(x => x.Name).IsUnique();
+            entity.HasIndex(x => x.Name).IsUnique().HasFilter("[IsDeleted] = 0");
             entity.HasQueryFilter(x => !x.IsDeleted);
         });
 

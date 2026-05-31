@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
+using HotelOrderSystem.Api.Common;
 using HotelOrderSystem.Api.Config;
 using HotelOrderSystem.Api.Data;
 using HotelOrderSystem.Api.Hubs;
@@ -9,6 +10,7 @@ using HotelOrderSystem.Api.Middleware;
 using HotelOrderSystem.Api.Services;
 using HotelOrderSystem.Api.Workers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -34,6 +36,19 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddMemoryCache();
 builder.Services.AddSignalR();
 builder.Services.AddControllers();
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var message = context.ModelState
+            .Where(kvp => kvp.Value?.Errors.Count > 0)
+            .SelectMany(kvp => kvp.Value!.Errors)
+            .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage) ? "Invalid request." : error.ErrorMessage)
+            .FirstOrDefault() ?? "Invalid request.";
+
+        return new BadRequestObjectResult(ApiResponse.Fail(message));
+    };
+});
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>
@@ -115,7 +130,6 @@ builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IPresenceService, PresenceService>();
-builder.Services.AddScoped<INotificationOutboxService, NotificationOutboxService>();
 builder.Services.AddScoped<IPushNotificationService, FirebasePushNotificationService>();
 builder.Services.AddSingleton<IRealtimeNotificationService, RealtimeNotificationService>();
 

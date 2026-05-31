@@ -1,46 +1,48 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace HotelOrderSystem.Api.Dtos;
 
-public sealed record CreateTeamRequest(string Name, bool IsActive = true);
-public sealed record UpdateTeamRequest(string Name, bool IsActive = true);
+public sealed record CreateTeamRequest([property: Required, MaxLength(150)] string Name, bool IsActive = true);
+public sealed record UpdateTeamRequest([property: Required, MaxLength(150)] string Name, bool IsActive = true);
 
-public sealed record CreateRoomRequest(string RoomNumber, string? DirectLinkPayload, bool IsActive = true);
-public sealed record UpdateRoomRequest(string RoomNumber, string? DirectLinkPayload, bool IsActive = true);
+public sealed record CreateRoomRequest([property: Required, MaxLength(50)] string RoomNumber, [property: MaxLength(250)] string? DirectLinkPayload, bool IsActive = true);
+public sealed record UpdateRoomRequest([property: Required, MaxLength(50)] string RoomNumber, [property: MaxLength(250)] string? DirectLinkPayload, bool IsActive = true);
 
-public sealed record CreateItemCategoryRequest(string Name, string? Description, bool IsActive = true);
-public sealed record UpdateItemCategoryRequest(string Name, string? Description, bool IsActive = true);
+public sealed record CreateItemCategoryRequest([property: Required, MaxLength(150)] string Name, [property: MaxLength(500)] string? Description, bool IsActive = true);
+public sealed record UpdateItemCategoryRequest([property: Required, MaxLength(150)] string Name, [property: MaxLength(500)] string? Description, bool IsActive = true);
 
 public sealed record CreateItemRequest(
-    string Name,
-    string Type,
-    int ItemCategoryId,
+    [property: Required, MaxLength(200)] string Name,
+    [property: Required, MaxLength(50)] string Type,
+    [property: Range(1, int.MaxValue)] int ItemCategoryId,
     int? TargetTeamId,
     string? BaseProperties,
     bool StaffOnly = false,
     bool IsActive = true);
 
 public sealed record UpdateItemRequest(
-    string Name,
-    string Type,
-    int ItemCategoryId,
+    [property: Required, MaxLength(200)] string Name,
+    [property: Required, MaxLength(50)] string Type,
+    [property: Range(1, int.MaxValue)] int ItemCategoryId,
     int? TargetTeamId,
     string? BaseProperties,
     bool StaffOnly = false,
     bool IsActive = true);
 
 public sealed record CreateUserRequest(
-    string FullName,
-    string UserName,
-    string Password,
+    [property: Required, MaxLength(200)] string FullName,
+    [property: Required, MaxLength(80)] string UserName,
+    [property: Required, MaxLength(200)] string Password,
     int? TeamId,
-    string Role,
+    [property: Required, MaxLength(50)] string Role,
     bool IsActive = true);
 
 public sealed record UpdateUserRequest(
-    string FullName,
+    [property: Required, MaxLength(200)] string FullName,
     int? TeamId,
-    string Role,
+    [property: Required, MaxLength(50)] string Role,
     bool IsActive = true,
-    string? NewPassword = null);
+    [property: MaxLength(200)] string? NewPassword = null);
 
 public sealed record DashboardSummaryDto(
     int PendingOrders,

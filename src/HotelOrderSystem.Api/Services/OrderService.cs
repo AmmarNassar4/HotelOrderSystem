@@ -116,11 +116,17 @@ public sealed class OrderService : IOrderService
                 assignedTeamId = order.AssignedTeamId,
                 createdAtUtc = order.CreatedAtUtc
             }));
+        }
 
+        // Persist outbox rows before firing realtime so a save failure does not
+        // leave clients notified while push notifications are silently lost.
+        await _db.SaveChangesAsync(cancellationToken);
+
+        foreach (var order in responseOrders)
+        {
             await _realtime.NotifyOrderCreatedAsync(order, cancellationToken);
         }
 
-        await _db.SaveChangesAsync(cancellationToken);
         await _realtime.NotifyDashboardChangedAsync(cancellationToken);
 
         return ApiResponse<CreateOrderResponse>.Success(new CreateOrderResponse(responseOrders));
@@ -228,11 +234,40 @@ public sealed class OrderService : IOrderService
             return ApiResponse<OrderDto>.Fail("Order was already accepted by another staff member.");
         }
 
-        var updated = await QueryOrders().FirstAsync(x => x.OrderId == orderId, cancellationToken);
-        var dto = OrderMapper.MapToDto(updated);
+        // The accepting user was not loaded when the order was Pending; load just
+        // that navigation instead of re-querying the whole order graph.
+        await _db.Entry(order).Reference(x => x.AcceptedByUser).LoadAsync(cancellationToken);
+        var dto = OrderMapper.MapToDto(order);
         await _realtime.NotifyOrderAcceptedAsync(dto, cancellationToken);
         await _realtime.NotifyDashboardChangedAsync(cancellationToken);
 
+        return ApiResponse<OrderDto>.Success(dto);
+    }
+
+    public async Task<ApiResponse<OrderDto>> StartAsync(int orderId, int userId, string role, CancellationToken cancellationToken = default)
+    {
+        var order = await QueryOrders().FirstOrDefaultAsync(x => x.OrderId == orderId, cancellationToken);
+        if (order is null)
+        {
+            return ApiResponse<OrderDto>.Fail("Order not found.");
+        }
+
+        if (order.Status != OrderStatuses.Accepted)
+        {
+            return ApiResponse<OrderDto>.Fail("Only accepted orders can be started.");
+        }
+
+        if (role != Roles.Admin && order.AcceptedByUserId != userId)
+        {
+            return ApiResponse<OrderDto>.Fail("Only the accepting staff member can start this order.");
+        }
+
+        order.Status = OrderStatuses.InProgress;
+
+        await _db.SaveChangesAsync(cancellationToken);
+
+        var dto = OrderMapper.MapToDto(order);
+        await _realtime.NotifyDashboardChangedAsync(cancellationToken);
         return ApiResponse<OrderDto>.Success(dto);
     }
 
@@ -267,8 +302,8 @@ public sealed class OrderService : IOrderService
 
         await _db.SaveChangesAsync(cancellationToken);
 
-        var updated = await QueryOrders().FirstAsync(x => x.OrderId == orderId, cancellationToken);
-        var dto = OrderMapper.MapToDto(updated);
+        // order was loaded with all navigations; no FK changed, so reuse it directly.
+        var dto = OrderMapper.MapToDto(order);
         await _realtime.NotifyOrderCompletedAsync(dto, cancellationToken);
         await _realtime.NotifyDashboardChangedAsync(cancellationToken);
 
@@ -296,8 +331,20 @@ public sealed class OrderService : IOrderService
         order.Status = OrderStatuses.Cancelled;
         order.CancelledAt = DateTime.UtcNow;
 
+        EnqueueNotification(NotificationTypes.OrderCancelled, null, order.AssignedTeamId, JsonSerializer.Serialize(new
+        {
+            type = NotificationTypes.OrderCancelled,
+            orderId = order.OrderId,
+            roomId = order.RoomId,
+            assignedTeamId = order.AssignedTeamId,
+            cancelledByUserId = userId,
+            cancelledAtUtc = order.CancelledAt
+        }));
+
         await _db.SaveChangesAsync(cancellationToken);
+
         var dto = OrderMapper.MapToDto(order);
+        await _realtime.NotifyOrderCancelledAsync(dto, cancellationToken);
         await _realtime.NotifyDashboardChangedAsync(cancellationToken);
         return ApiResponse<OrderDto>.Success(dto);
     }

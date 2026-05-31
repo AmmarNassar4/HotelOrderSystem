@@ -53,6 +53,13 @@ public sealed class OrdersController : ControllerBase
         return result.IsSuccess ? Ok(result) : Conflict(result);
     }
 
+    [HttpPut("{id:int}/start")]
+    public async Task<ActionResult<ApiResponse<OrderDto>>> Start(int id, CancellationToken cancellationToken)
+    {
+        var result = await _orders.StartAsync(id, User.GetUserId(), User.GetRoleName(), cancellationToken);
+        return result.IsSuccess ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPut("{id:int}/complete")]
     public async Task<ActionResult<ApiResponse<OrderDto>>> Complete(int id, CompleteOrderRequest request, CancellationToken cancellationToken)
     {
