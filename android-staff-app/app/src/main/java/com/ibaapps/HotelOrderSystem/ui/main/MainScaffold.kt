@@ -27,6 +27,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.ibaapps.HotelOrderSystem.ui.orders.PendingScreen
 import com.ibaapps.HotelOrderSystem.ui.status.StatusScreen
 
 private enum class BottomTab(val route: String, val label: String, val icon: ImageVector) {
@@ -78,7 +79,7 @@ fun MainScaffold(
             startDestination = BottomTab.Pending.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(BottomTab.Pending.route) { TabPlaceholder("Pending orders") }
+            composable(BottomTab.Pending.route) { PendingScreen(onOpenOrderDetails = onOpenOrderDetails) }
             composable(BottomTab.MyTasks.route) { TabPlaceholder("My active tasks") }
             composable(BottomTab.Status.route) { StatusScreen() }
             composable(BottomTab.Profile.route) { TabPlaceholder("Profile") }
