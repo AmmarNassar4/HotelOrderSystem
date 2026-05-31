@@ -33,6 +33,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -102,6 +103,9 @@ dependencies {
     // AndroidX core
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
+
+    // java.time on minSdk 23
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.3")
 
     // Firebase Cloud Messaging
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
