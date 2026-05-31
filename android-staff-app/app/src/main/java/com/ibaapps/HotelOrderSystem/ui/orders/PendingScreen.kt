@@ -24,6 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ibaapps.HotelOrderSystem.ui.common.toClockTimeOrDash
 
@@ -35,6 +37,10 @@ fun PendingScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Refresh pending orders whenever the screen resumes (e.g. back from
+    // background or details) so REST stays authoritative (§13).
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
 
     androidx.compose.runtime.LaunchedEffect(state.transientMessage) {
         state.transientMessage?.let {

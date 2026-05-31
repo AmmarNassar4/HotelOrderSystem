@@ -31,6 +31,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ibaapps.HotelOrderSystem.domain.model.Order
 import com.ibaapps.HotelOrderSystem.ui.common.toClockTimeOrDash
@@ -44,6 +46,9 @@ fun MyTasksScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var orderToComplete by remember { mutableStateOf<Order?>(null) }
+
+    // Refresh active tasks on resume so REST stays authoritative (§13).
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
 
     LaunchedEffect(state.transientMessage) {
         state.transientMessage?.let {
