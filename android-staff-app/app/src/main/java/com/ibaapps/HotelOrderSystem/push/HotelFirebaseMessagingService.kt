@@ -9,23 +9,14 @@ import com.google.firebase.messaging.RemoteMessage
 import com.ibaapps.HotelOrderSystem.MainActivity
 import com.ibaapps.HotelOrderSystem.Notifications
 import com.ibaapps.HotelOrderSystem.R
-import com.ibaapps.HotelOrderSystem.net.ApiClient
 import com.ibaapps.HotelOrderSystem.storage.AppPrefs
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 
 class HotelFirebaseMessagingService : FirebaseMessagingService() {
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        val prefs = AppPrefs(this)
-        prefs.fcmToken = token
-        if (!prefs.authToken.isNullOrBlank()) {
-            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-                runCatching { ApiClient(prefs).registerDeviceToken(token) }
-            }
-        }
+        // Persist the refreshed token. Re-registration with the backend is wired
+        // up in Task 12 once the Retrofit-based device repository exists.
+        AppPrefs(this).fcmToken = token
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
