@@ -169,14 +169,23 @@ public sealed class PresenceService : IPresenceService
             .Where(x => x.IsOnline && (!x.LastHeartbeatAt.HasValue || x.LastHeartbeatAt < cutoff))
             .ToListAsync(cancellationToken);
 
+        if (stale.Count == 0)
+        {
+            return 0;
+        }
+
         foreach (var presence in stale)
         {
             presence.IsOnline = false;
             presence.UpdatedAt = DateTime.UtcNow;
-            await _realtime.NotifyStaffPresenceChangedAsync(presence.UserId, false, cancellationToken);
         }
 
         await _db.SaveChangesAsync(cancellationToken);
+
+        var notificationTasks = stale.Select(p =>
+            _realtime.NotifyStaffPresenceChangedAsync(p.UserId, false, cancellationToken));
+        await Task.WhenAll(notificationTasks);
+
         return stale.Count;
     }
 }

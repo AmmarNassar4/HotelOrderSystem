@@ -12,10 +12,13 @@ namespace HotelOrderSystem.Api.Services;
 public sealed class JwtTokenService : IJwtTokenService
 {
     private readonly JwtOptions _options;
+    private readonly SigningCredentials _signingCredentials;
 
     public JwtTokenService(IOptions<JwtOptions> options)
     {
         _options = options.Value;
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));
+        _signingCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
     }
 
     public AuthResponse CreateToken(User user)
@@ -35,15 +38,12 @@ public sealed class JwtTokenService : IJwtTokenService
             claims.Add(new Claim("team_id", user.TeamId.Value.ToString()));
         }
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
         var token = new JwtSecurityToken(
             issuer: _options.Issuer,
             audience: _options.Audience,
             claims: claims,
             expires: expiresAt,
-            signingCredentials: credentials);
+            signingCredentials: _signingCredentials);
 
         return new AuthResponse(
             new JwtSecurityTokenHandler().WriteToken(token),

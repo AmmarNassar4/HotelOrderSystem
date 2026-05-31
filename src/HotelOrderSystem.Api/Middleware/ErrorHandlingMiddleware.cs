@@ -7,6 +7,7 @@ namespace HotelOrderSystem.Api.Middleware;
 
 public sealed class ErrorHandlingMiddleware
 {
+    private static readonly JsonSerializerOptions sJsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     private readonly RequestDelegate _next;
     private readonly ILogger<ErrorHandlingMiddleware> _logger;
 
@@ -45,9 +46,6 @@ public sealed class ErrorHandlingMiddleware
         context.Response.ContentType = "application/json";
 
         var payload = ApiResponse.Fail(message);
-        await context.Response.WriteAsync(JsonSerializer.Serialize(payload, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        }));
+        await context.Response.WriteAsync(JsonSerializer.Serialize(payload, sJsonOptions));
     }
 }

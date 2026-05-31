@@ -110,7 +110,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddScoped<IPasswordService, PasswordService>();
+builder.Services.AddSingleton<IPasswordService, PasswordService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
@@ -143,7 +143,7 @@ using (var scope = app.Services.CreateScope())
     }
 
     var notificationOptions = configuration.GetSection("Notifications").Get<NotificationOptions>();
-    if (notificationOptions?.FcmMode != "Stub")
+    if (notificationOptions?.FcmMode != NotificationOptions.FcmModeStub)
     {
         var firebaseLogger = loggerFactory.CreateLogger("FirebaseInit");
         const string serviceAccountFileName = "firebase-service-account.json";

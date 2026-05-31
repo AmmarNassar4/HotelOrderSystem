@@ -103,7 +103,7 @@ public sealed class OrderService : IOrderService
             .OrderBy(x => x.OrderId)
             .ToListAsync(cancellationToken);
 
-        var responseOrders = createdOrders.Select(MapOrder).ToList();
+        var responseOrders = createdOrders.Select(OrderMapper.MapToDto).ToList();
 
         foreach (var order in responseOrders)
         {
@@ -145,7 +145,7 @@ public sealed class OrderService : IOrderService
             .OrderBy(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return ApiResponse<IReadOnlyList<OrderDto>>.Success(orders.Select(MapOrder).ToList());
+        return ApiResponse<IReadOnlyList<OrderDto>>.Success(orders.Select(OrderMapper.MapToDto).ToList());
     }
 
     public async Task<ApiResponse<IReadOnlyList<OrderDto>>> GetMyActiveAsync(int userId, CancellationToken cancellationToken = default)
@@ -155,7 +155,7 @@ public sealed class OrderService : IOrderService
             .OrderBy(x => x.AcceptedAt)
             .ToListAsync(cancellationToken);
 
-        return ApiResponse<IReadOnlyList<OrderDto>>.Success(orders.Select(MapOrder).ToList());
+        return ApiResponse<IReadOnlyList<OrderDto>>.Success(orders.Select(OrderMapper.MapToDto).ToList());
     }
 
     public async Task<ApiResponse<OrderDto>> GetByIdAsync(int orderId, int userId, int? teamId, string role, CancellationToken cancellationToken = default)
@@ -171,7 +171,7 @@ public sealed class OrderService : IOrderService
             return ApiResponse<OrderDto>.Fail("You do not have permission to view this order.");
         }
 
-        return ApiResponse<OrderDto>.Success(MapOrder(order));
+        return ApiResponse<OrderDto>.Success(OrderMapper.MapToDto(order));
     }
 
     public async Task<ApiResponse<OrderDto>> AcceptAsync(int orderId, int userId, int? teamId, string role, AcceptOrderRequest request, CancellationToken cancellationToken = default)
@@ -229,7 +229,7 @@ public sealed class OrderService : IOrderService
         }
 
         var updated = await QueryOrders().FirstAsync(x => x.OrderId == orderId, cancellationToken);
-        var dto = MapOrder(updated);
+        var dto = OrderMapper.MapToDto(updated);
         await _realtime.NotifyOrderAcceptedAsync(dto, cancellationToken);
         await _realtime.NotifyDashboardChangedAsync(cancellationToken);
 
@@ -268,7 +268,7 @@ public sealed class OrderService : IOrderService
         await _db.SaveChangesAsync(cancellationToken);
 
         var updated = await QueryOrders().FirstAsync(x => x.OrderId == orderId, cancellationToken);
-        var dto = MapOrder(updated);
+        var dto = OrderMapper.MapToDto(updated);
         await _realtime.NotifyOrderCompletedAsync(dto, cancellationToken);
         await _realtime.NotifyDashboardChangedAsync(cancellationToken);
 
@@ -297,7 +297,7 @@ public sealed class OrderService : IOrderService
         order.CancelledAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(cancellationToken);
-        var dto = MapOrder(order);
+        var dto = OrderMapper.MapToDto(order);
         await _realtime.NotifyDashboardChangedAsync(cancellationToken);
         return ApiResponse<OrderDto>.Success(dto);
     }
@@ -367,31 +367,4 @@ public sealed class OrderService : IOrderService
         return CanAccessTeam(order.AssignedTeamId, teamId, role);
     }
 
-    private static OrderDto MapOrder(Order order)
-    {
-        return new OrderDto(
-            order.OrderId,
-            order.RoomId,
-            order.Room.RoomNumber,
-            order.AssignedTeamId,
-            order.AssignedTeam?.Name,
-            order.Source,
-            order.Status,
-            order.CreatedByUserId,
-            order.CreatedByUser?.FullName,
-            order.AcceptedByUserId,
-            order.AcceptedByUser?.FullName,
-            order.CreatedAt,
-            order.AcceptedAt,
-            order.CompletedAt,
-            order.SlaDueAt,
-            order.EscalatedAt,
-            order.RowVersion.Length == 0 ? string.Empty : Convert.ToBase64String(order.RowVersion),
-            order.Details.Select(detail => new OrderDetailDto(
-                detail.OrderDetailId,
-                detail.ItemId,
-                detail.Item.Name,
-                detail.Quantity,
-                detail.DynamicAttributes)).ToList());
-    }
 }

@@ -24,6 +24,13 @@ public sealed class AdminHub : Hub
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, "admins");
+
+        var teamId = Context.User?.FindFirstValue("team_id");
+        if (!string.IsNullOrWhiteSpace(teamId))
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"team:{teamId}");
+        }
+
         await base.OnDisconnectedAsync(exception);
     }
 }

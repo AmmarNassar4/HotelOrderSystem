@@ -27,8 +27,27 @@ public sealed class NotificationOutboxWorker : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            await ProcessPendingAsync(stoppingToken);
-            await timer.WaitForNextTickAsync(stoppingToken);
+            try
+            {
+                await ProcessPendingAsync(stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Notification outbox processing failed; will retry next interval.");
+            }
+
+            try
+            {
+                await timer.WaitForNextTickAsync(stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
         }
     }
 

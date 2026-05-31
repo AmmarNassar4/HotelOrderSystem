@@ -51,6 +51,7 @@ public sealed class AdminDashboardController : ControllerBase
             .Include(x => x.AcceptedByUser)
                 .ThenInclude(x => x!.Team)
             .Where(x => x.CreatedAt >= from && x.CreatedAt <= to)
+            .AsSplitQuery()
             .ToListAsync(cancellationToken);
 
         var availabilityLogs = await _db.StaffAvailabilityLogs
@@ -58,6 +59,7 @@ public sealed class AdminDashboardController : ControllerBase
             .Include(x => x.User)
                 .ThenInclude(x => x.Team)
             .Where(x => x.StartedAt <= to && (x.EndedAt == null || x.EndedAt >= from))
+            .AsSplitQuery()
             .ToListAsync(cancellationToken);
 
         var total = orders.Count;

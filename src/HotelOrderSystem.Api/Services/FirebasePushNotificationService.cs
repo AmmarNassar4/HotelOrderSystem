@@ -80,7 +80,7 @@ public sealed class FirebasePushNotificationService : IPushNotificationService
 
     private async Task SendTokensAsync(IReadOnlyList<string> tokens, string type, string payloadJson, CancellationToken cancellationToken)
     {
-        if (_options.FcmMode == "Stub")
+        if (_options.FcmMode == NotificationOptions.FcmModeStub)
         {
             _logger.LogInformation("FCM stub mode enabled: type={Type}, tokenCount={TokenCount}", type, tokens.Count);
             return;
@@ -101,6 +101,7 @@ public sealed class FirebasePushNotificationService : IPushNotificationService
 
         var body = GetBodyFromPayload(payloadJson);
 
+        using var semaphore = new SemaphoreSlim(10);
         var tasks = new List<Task<FcmSendResult>>();
         foreach (var token in tokens)
         {
@@ -119,7 +120,7 @@ public sealed class FirebasePushNotificationService : IPushNotificationService
                 }
             };
 
-            tasks.Add(SendSingleAsync(sender, token, message));
+            tasks.Add(SendThrottledAsync(sender, semaphore, token, message));
         }
 
         var results = await Task.WhenAll(tasks);
@@ -148,6 +149,19 @@ public sealed class FirebasePushNotificationService : IPushNotificationService
                 .Where(x => invalidTokens.Contains(x.FcmToken!))
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsActive, false), cancellationToken);
             _logger.LogWarning("Deactivated {Count} invalid or unregistered FCM tokens.", invalidTokens.Count);
+        }
+    }
+
+    private static async Task<FcmSendResult> SendThrottledAsync(FirebaseMessaging sender, SemaphoreSlim semaphore, string token, Message message)
+    {
+        await semaphore.WaitAsync();
+        try
+        {
+            return await SendSingleAsync(sender, token, message);
+        }
+        finally
+        {
+            semaphore.Release();
         }
     }
 
